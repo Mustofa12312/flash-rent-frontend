@@ -15,6 +15,7 @@ const AdminSettingsPage = () => {
   const [storeName, setStoreName] = useState('Flash Rent');
   const [storeEmail, setStoreEmail] = useState('support@flashrent.com');
   const [storeDescription, setStoreDescription] = useState('Platform sewa lisensi premium dan akun digital terbaik.');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('6281234567890');
   
   const [apiKey, setApiKey] = useState('sk_test_12345abcdefghijklmnopqrstuvwxyz');
   const [sandboxMode, setSandboxMode] = useState(true);
@@ -30,6 +31,7 @@ const AdminSettingsPage = () => {
           if (data.storeName) setStoreName(data.storeName);
           if (data.storeEmail) setStoreEmail(data.storeEmail);
           if (data.storeDescription) setStoreDescription(data.storeDescription);
+          if (data.adminWhatsapp) setAdminWhatsapp(data.adminWhatsapp);
           if (data.apiKey) setApiKey(data.apiKey);
           if (data.sandboxMode !== undefined) setSandboxMode(data.sandboxMode);
         } else {
@@ -60,7 +62,7 @@ const AdminSettingsPage = () => {
   };
 
   const handleSaveGeneral = () => {
-    saveSettingsToFirestore({ storeName, storeEmail, storeDescription });
+    saveSettingsToFirestore({ storeName, storeEmail, storeDescription, adminWhatsapp });
   };
 
   const handleSavePayment = () => {
@@ -171,6 +173,14 @@ const AdminSettingsPage = () => {
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium text-slate-300">Deskripsi Singkat (SEO)</label>
                     <textarea rows={3} value={storeDescription} onChange={e => setStoreDescription(e.target.value)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-300">Nomor WhatsApp Admin</label>
+                    <div className="flex items-center">
+                      <span className="bg-slate-700 border border-white/10 rounded-l-xl px-3 py-2.5 text-slate-400 text-sm">+</span>
+                      <input type="text" value={adminWhatsapp} onChange={e => setAdminWhatsapp(e.target.value.replace(/\D/g, ''))} placeholder="6281234567890" className="flex-1 bg-slate-800/50 border border-white/10 border-l-0 rounded-r-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                    </div>
+                    <p className="text-xs text-slate-500">Format: kode negara + nomor (tanpa + atau spasi, contoh: 6281234567890)</p>
                   </div>
                 </div>
 

@@ -74,7 +74,14 @@ const AdminProductsPage = () => {
       description: product.description,
       image: product.image || '',
       rating: product.rating || 5.0,
-      packages: product.packages || []
+      packages: (product.packages || []).map((pkg: any) => ({
+        ...pkg,
+        // Convert numeric price back to formatted string for the form
+        price: typeof pkg.price === 'number'
+          ? pkg.price.toLocaleString('id-ID')
+          : (pkg.price || ''),
+        durationValue: String(pkg.durationValue || '1'),
+      }))
     });
     setIsAddModalOpen(true);
   };
@@ -88,14 +95,20 @@ const AdminProductsPage = () => {
         image: formData.image || '',
         rating: formData.rating,
         features: ['Fitur Premium 1', 'Fitur Premium 2'],
-        packages: formData.packages.map((pkg, i) => ({
-          id: `pkg-${Date.now()}-${i}`,
-          name: pkg.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${pkg.durationValue} ${pkg.durationUnit}`,
-          durationType: pkg.durationUnit === 'Unlimited' ? 'UNLIMITED' : 'LIMITED',
-          durationUnit: pkg.durationUnit,
-          durationValue: Number(pkg.durationValue) || 1,
-          price: Number(pkg.price.replace(/\./g, ''))
-        }))
+        packages: formData.packages.map((pkg, i) => {
+          // price can be a formatted string ("100.000") or a plain number; normalize both
+          const rawPrice = typeof pkg.price === 'number'
+            ? pkg.price
+            : Number(String(pkg.price).replace(/\./g, ''));
+          return {
+            id: pkg.id || `pkg-${Date.now()}-${i}`,
+            name: pkg.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${pkg.durationValue} ${pkg.durationUnit}`,
+            durationType: pkg.durationUnit === 'Unlimited' ? 'UNLIMITED' : 'LIMITED',
+            durationUnit: pkg.durationUnit,
+            durationValue: Number(pkg.durationValue) || 1,
+            price: rawPrice
+          };
+        })
       };
       
       if (editProductId) {

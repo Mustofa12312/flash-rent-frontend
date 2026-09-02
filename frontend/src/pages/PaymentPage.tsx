@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Product, Package } from '../types';
-import { Loader2, QrCode, AlertCircle, ShieldCheck, MessageCircle } from 'lucide-react';
+import { QrCode, AlertCircle, ShieldCheck, MessageCircle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -31,6 +31,18 @@ export default function PaymentPage() {
   const [qrisString, setQrisString] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'VERIFYING' | 'PAID' | 'EXPIRED'>('PENDING');
+  const [adminWA, setAdminWA] = useState('6281234567890');
+
+  useEffect(() => {
+    // Load admin WhatsApp from settings
+    import('firebase/firestore').then(({ getDoc, doc: fsDoc }) => {
+      getDoc(fsDoc(db, 'settings', 'app')).then(snap => {
+        if (snap.exists() && snap.data().adminWhatsapp) {
+          setAdminWA(snap.data().adminWhatsapp);
+        }
+      }).catch(() => {});
+    });
+  }, []);
 
   useEffect(() => {
     if (!orderId) return;
@@ -107,15 +119,11 @@ export default function PaymentPage() {
   const handleManualVerification = async () => {
     try {
       await updateDoc(doc(db, 'orders', orderId!), { status: 'VERIFYING' });
-      
-      // Buka pop-up WhatsApp
-      const waNumber = "6281234567890"; // Ganti dengan nomor Admin
-      const text = `Halo Admin, saya sudah melakukan pembayaran untuk Order ID: *${orderId}* senilai *${formatIDR(state.finalPrice)}*. Berikut bukti transfernya:`;
-      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(text)}`, '_blank');
-      
-    } catch (error) {
+      // Status akan otomatis berubah ke VERIFYING,
+      // dan admin akan memverifikasi secara manual dari dashboard.
+    } catch (error: any) {
       console.error('Error updating order status:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      alert(`Gagal mengupdate status pesanan. Pesan error: ${error?.message || 'Unknown'}`);
     }
   };
 
@@ -156,13 +164,13 @@ export default function PaymentPage() {
         ) : paymentStatus === 'VERIFYING' ? (
           <div className="text-center py-10">
             <div className="w-20 h-20 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-10 h-10 animate-spin" />
+              <ShieldCheck className="w-10 h-10" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">Menunggu Verifikasi Admin</h2>
             <p className="text-slate-500 mb-6">Jangan tutup halaman ini. Kami sedang memverifikasi mutasi pembayaran Anda.</p>
             
             <a 
-              href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Admin, saya ingin konfirmasi pembayaran Order ${orderId}`)}`}
+              href={`https://wa.me/${adminWA}?text=${encodeURIComponent(`Halo Admin, saya ingin konfirmasi pembayaran Order ${orderId}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full transition-colors shadow-lg shadow-emerald-500/30"
@@ -198,8 +206,8 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <p className="text-slate-600 mb-2 flex items-center">
-              <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-500" />
+            <p className="text-slate-600 mb-2 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
               Selesaikan pembayaran dalam
             </p>
             <div className="text-xl font-bold text-slate-900 mb-8">
