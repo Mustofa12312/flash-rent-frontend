@@ -5,8 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Product, Package, PromoCode } from '../types';
 import { Shield, CreditCard, ChevronLeft, Tag, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 // Form validation schema using Zod
@@ -117,31 +117,45 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormInputs) => {
     setIsSubmitting(true);
     try {
-      const createOrderFn = httpsCallable(functions, 'createOrder');
+      // 1. Generate unique 3-digit code
+      const uniqueCode = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
+      const amount = finalPrice + uniqueCode;
+
+      // 2. Create Order in DB
+      const orderId = `FR-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
       
       const payload = {
+        id: orderId,
+        userId: currentUser?.uid || 'GUEST',
+        customerName: data.name,
+        customerEmail: data.email,
+        customerWhatsapp: data.whatsapp,
         productId: product.id,
         packageId: pkg.id,
-        customer: {
-          name: data.name,
-          email: data.email,
-          whatsapp: data.whatsapp
-        },
-        promoCode: appliedPromo?.code // Can be handled in backend later
+        productName: product.name,
+        productCategory: product.category,
+        packageName: pkg.name,
+        packageDurationType: pkg.durationType,
+        packageDurationValue: pkg.durationValue,
+        packageDurationUnit: pkg.durationUnit,
+        amount: amount,
+        status: 'PENDING',
+        promoCode: appliedPromo?.code || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      const result = await createOrderFn(payload);
-      const orderData = result.data as any;
+      await setDoc(doc(db, 'orders', orderId), payload);
       
-      navigate(`/payment/${orderData.orderId}`, { 
+      navigate(`/payment/${orderId}`, { 
         state: { 
           product, 
           pkg,
           customerDetails: data,
           promo: appliedPromo,
-          finalPrice: orderData.amount,
-          qrisUrl: orderData.qrisUrl,
-          expiresAt: orderData.expiresAt
+          finalPrice: amount,
+          qrisUrl: '/images/qris-pribadi.png', // QRIS Statis kita
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
         }
       });
     } catch (error: any) {

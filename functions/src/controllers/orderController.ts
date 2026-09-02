@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions/v2';
 import { db } from '../config/firebase';
 import { PaymentService } from '../services/paymentService';
+import { AccessManager } from '../services/accessManager';
 import * as crypto from 'crypto';
 
 export const createOrder = functions.https.onCall(async (request) => {
@@ -100,3 +101,117 @@ export const createOrder = functions.https.onCall(async (request) => {
     throw new functions.https.HttpsError('internal', error.message || 'Internal Server Error');
   }
 });
+
+/**
+ * Endpoint khusus Admin untuk memverifikasi pembayaran (Manual QRIS).
+ */
+export const verifyOrderPayment = functions.https.onCall(async (request) => {
+  try {
+    const { orderId, action } = request.data;
+    const uid = request.auth?.uid;
+
+    if (!uid) {
+      throw new functions.https.HttpsError('unauthenticated', 'Anda harus login.');
+    }
+
+    // 1. Verifikasi apakah user yang memanggil ini adalah ADMIN
+    const userRef = db.collection('users').doc(uid);
+    const userSnap = await userRef.get();
+    
+    if (!userSnap.exists || userSnap.data()?.role !== 'ADMIN') {
+      throw new functions.https.HttpsError('permission-denied', 'Hanya admin yang dapat melakukan aksi ini.');
+    }
+
+    if (!orderId || !action || !['APPROVE', 'REJECT'].includes(action)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Parameter tidak valid (butuh orderId dan action = APPROVE/REJECT).');
+    }
+
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pesanan tidak ditemukan.');
+    }
+
+    const orderData = orderSnap.data()!;
+
+    if (orderData.status !== 'VERIFYING') {
+      throw new functions.https.HttpsError('failed-precondition', `Pesanan ini tidak dalam status VERIFYING (Saat ini: ${orderData.status}).`);
+    }
+
+    if (action === 'REJECT') {
+      // Tolak pembayaran
+      await orderRef.update({
+        status: 'FAILED',
+        updatedAt: new Date().toISOString()
+      });
+      return { success: true, message: 'Pesanan telah ditolak.' };
+    }
+
+    if (action === 'APPROVE') {
+      // 2. Jika disetujui, update status ke PAID
+      await orderRef.update({
+        status: 'PAID',
+        updatedAt: new Date().toISOString()
+      });
+
+      if (orderData.paymentId) {
+        await db.collection('payments').doc(orderData.paymentId).update({
+          status: 'PAID',
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // 3. Generate Kredensial via AccessManager
+      const accessData = await AccessManager.assignAccessData(
+        orderData.productId, 
+        orderId, 
+        orderData.productCategory
+      );
+
+      // 4. Buat dokumen Rentals
+      const rentalId = `RNT-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+      
+      // Calculate Expiry if not UNLIMITED
+      let expiresAt: string | null = null;
+      if (orderData.packageDurationType !== 'UNLIMITED') {
+        const now = new Date();
+        const value = orderData.packageDurationValue || 30;
+        
+        if (orderData.packageDurationUnit === 'Hari') now.setDate(now.getDate() + value);
+        else if (orderData.packageDurationUnit === 'Bulan') now.setMonth(now.getMonth() + value);
+        else if (orderData.packageDurationUnit === 'Tahun') now.setFullYear(now.getFullYear() + value);
+        
+        expiresAt = now.toISOString();
+      }
+
+      const rentalRef = db.collection('rentals').doc(rentalId);
+      await rentalRef.set({
+        id: rentalId,
+        orderId: orderId,
+        userId: orderData.userId,
+        productId: orderData.productId,
+        productName: orderData.productName,
+        packageId: orderData.packageId,
+        package: orderData.packageName,
+        durationUnit: orderData.packageDurationUnit,
+        durationValue: orderData.packageDurationValue,
+        status: 'ACTIVE',
+        accessData: accessData,
+        createdAt: new Date().toISOString(),
+        expiresAt: expiresAt
+      });
+
+      return { success: true, message: 'Pesanan berhasil disetujui dan lisensi dibuat.' };
+    }
+
+    return { success: false, message: 'Unhandled action' };
+  } catch (error: any) {
+    console.error('[verifyOrderPayment] Error:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', error.message || 'Internal Server Error');
+  }
+});
+

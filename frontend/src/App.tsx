@@ -33,7 +33,7 @@ import NotFoundPage from './pages/NotFoundPage';
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-slate-50 flex flex-col">
     <Navbar />
-    <main className="flex-grow">
+    <main className="flex-grow pt-16">
       {children}
     </main>
     <Footer />
