@@ -6,6 +6,9 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentPage from './pages/PaymentPage';
 import SuccessPage from './pages/SuccessPage';
+import CustomerRentalsPage from './pages/CustomerRentalsPage';
+import CustomerOrdersPage from './pages/CustomerOrdersPage';
+import CustomerAccountPage from './pages/CustomerAccountPage';
 
 // Admin Pages
 import AdminLayout from './components/admin/AdminLayout';
@@ -61,6 +64,11 @@ function App() {
           <Route path="/payment" element={<PublicLayout><PaymentPage /></PublicLayout>} />
           <Route path="/success" element={<PublicLayout><SuccessPage /></PublicLayout>} />
           
+          {/* Customer Portal Routes */}
+          <Route path="/rentals" element={<PublicLayout><CustomerRentalsPage /></PublicLayout>} />
+          <Route path="/orders" element={<PublicLayout><CustomerOrdersPage /></PublicLayout>} />
+          <Route path="/account" element={<PublicLayout><CustomerAccountPage /></PublicLayout>} />
+
           {/* 404 Catch All */}
           <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
         </Routes>
