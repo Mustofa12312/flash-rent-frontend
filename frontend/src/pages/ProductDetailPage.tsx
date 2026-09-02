@@ -4,58 +4,55 @@ import PackageCard from '../components/PackageCard';
 import type { Product, Package } from '../types';
 import { ShieldCheck, Zap } from 'lucide-react';
 
-// Mock Data
-const MOCK_PRODUCT: Product = {
-  id: 'prod-1',
-  name: 'Canva Pro',
-  description: 'Akses penuh ke semua fitur premium Canva. Ratusan ribu template, elemen grafis, dan alat desain profesional. Tingkatkan produktivitas desain Anda ke level selanjutnya dengan akses tanpa batas ke library premium Canva.',
-  category: 'Design',
-  status: 'ACTIVE',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
+// Mock Data — All products with their packages
+const PRODUCTS_DB: Record<string, { product: Product; packages: Package[] }> = {
+  'prod-1': {
+    product: {
+      id: 'prod-1', name: 'Canva Pro',
+      description: 'Akses penuh ke semua fitur premium Canva. Ratusan ribu template, elemen grafis, dan alat desain profesional. Tingkatkan produktivitas desain Anda ke level selanjutnya.',
+      category: 'Design', status: 'ACTIVE', createdAt: '', updatedAt: ''
+    },
+    packages: [
+      { id: 'pkg-1a', productId: 'prod-1', name: '7 Hari', description: 'Akses percobaan untuk 1 minggu', price: 5000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-1b', productId: 'prod-1', name: '30 Hari', description: 'Paling populer untuk kebutuhan bulanan', price: 15000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-1c', productId: 'prod-1', name: 'Unlimited', description: 'Akses selamanya tanpa batas waktu', price: 100000, durationType: 'UNLIMITED', durationValue: null, durationUnit: null, status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    ]
+  },
+  'prod-2': {
+    product: {
+      id: 'prod-2', name: 'Spotify Premium',
+      description: 'Dengarkan musik tanpa iklan, unduh untuk offline, dan nikmati kualitas suara tertinggi. Streaming tanpa batas dari jutaan lagu.',
+      category: 'Entertainment', status: 'ACTIVE', createdAt: '', updatedAt: ''
+    },
+    packages: [
+      { id: 'pkg-2a', productId: 'prod-2', name: '7 Hari', description: 'Coba dulu seminggu', price: 8000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-2b', productId: 'prod-2', name: '30 Hari', description: 'Akses bulanan paling hemat', price: 15000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-2c', productId: 'prod-2', name: '1 Tahun', description: 'Hemat lebih banyak dengan paket tahunan', price: 120000, durationType: 'LIMITED', durationValue: 365, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    ]
+  },
+  'prod-3': {
+    product: {
+      id: 'prod-3', name: 'Netflix Premium',
+      description: 'Streaming film dan series kualitas 4K UHD. Mendukung hingga 4 layar bersamaan. Koleksi ribuan judul original.',
+      category: 'Entertainment', status: 'ACTIVE', createdAt: '', updatedAt: ''
+    },
+    packages: [
+      { id: 'pkg-3a', productId: 'prod-3', name: '7 Hari', description: 'Paket mingguan', price: 15000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-3b', productId: 'prod-3', name: '30 Hari', description: 'Paket bulanan terfavorit', price: 25000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    ]
+  },
+  'prod-4': {
+    product: {
+      id: 'prod-4', name: 'Microsoft Office 365',
+      description: 'Lisensi resmi Microsoft Word, Excel, PowerPoint, dan 1TB OneDrive Storage. Produktivitas tanpa batas.',
+      category: 'Software', status: 'ACTIVE', createdAt: '', updatedAt: ''
+    },
+    packages: [
+      { id: 'pkg-4a', productId: 'prod-4', name: '30 Hari', description: 'Lisensi 1 bulan', price: 35000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+      { id: 'pkg-4b', productId: 'prod-4', name: 'Unlimited', description: 'Lisensi selamanya', price: 250000, durationType: 'UNLIMITED', durationValue: null, durationUnit: null, status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    ]
+  },
 };
-
-const MOCK_PACKAGES: Package[] = [
-  {
-    id: 'pkg-1',
-    productId: 'prod-1',
-    name: '7 Hari',
-    description: 'Akses percobaan untuk 1 minggu',
-    price: 5000,
-    durationType: 'LIMITED',
-    durationValue: 7,
-    durationUnit: 'DAYS',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'pkg-2',
-    productId: 'prod-1',
-    name: '30 Hari',
-    description: 'Paling populer untuk kebutuhan bulanan',
-    price: 15000,
-    durationType: 'LIMITED',
-    durationValue: 30,
-    durationUnit: 'DAYS',
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'pkg-3',
-    productId: 'prod-1',
-    name: 'Unlimited',
-    description: 'Akses selamanya tanpa batas waktu',
-    price: 100000,
-    durationType: 'UNLIMITED',
-    durationValue: null,
-    durationUnit: null,
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,17 +64,18 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In real app, fetch by id
     setTimeout(() => {
-      setProduct({ ...MOCK_PRODUCT, id: id || 'prod-1' });
-      setPackages(MOCK_PACKAGES);
+      const data = PRODUCTS_DB[id || ''];
+      if (data) {
+        setProduct(data.product);
+        setPackages(data.packages);
+      }
       setLoading(false);
     }, 400);
   }, [id]);
 
   const handleCheckout = () => {
     if (selectedPackage && product) {
-      // Navigate to checkout passing state
       navigate('/checkout', { 
         state: { product, pkg: selectedPackage }
       });
@@ -85,10 +83,20 @@ export default function ProductDetailPage() {
   };
 
   if (loading) {
-    return <div className="min-h-[60vh] flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-[60vh] flex items-center justify-center text-slate-500">Memuat produk...</div>;
   }
 
-  if (!product) return <div>Product not found.</div>;
+  if (!product) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">Produk Tidak Ditemukan</h2>
+        <p className="text-slate-500 mb-6">Produk yang Anda cari tidak tersedia atau sudah dihapus.</p>
+        <button onClick={() => navigate('/catalog')} className="bg-blue-600 text-white px-6 py-3 rounded-full font-medium hover:bg-blue-700 transition-colors">
+          Kembali ke Katalog
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

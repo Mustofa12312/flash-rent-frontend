@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import CatalogPage from './pages/CatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -31,10 +32,7 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => (
     <main className="flex-grow">
       {children}
     </main>
-    
-    <footer className="bg-slate-900 text-slate-400 py-12 text-center mt-auto border-t border-slate-800">
-      <p>© {new Date().getFullYear()} Flash Rent. All rights reserved.</p>
-    </footer>
+    <Footer />
   </div>
 );
 
@@ -61,8 +59,8 @@ function App() {
           <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
           <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
           <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
-          <Route path="/payment" element={<PublicLayout><PaymentPage /></PublicLayout>} />
-          <Route path="/success" element={<PublicLayout><SuccessPage /></PublicLayout>} />
+          <Route path="/payment/:orderId" element={<PublicLayout><PaymentPage /></PublicLayout>} />
+          <Route path="/success/:orderId" element={<PublicLayout><SuccessPage /></PublicLayout>} />
           
           {/* Customer Portal Routes */}
           <Route path="/rentals" element={<PublicLayout><CustomerRentalsPage /></PublicLayout>} />
