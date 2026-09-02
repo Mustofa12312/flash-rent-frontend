@@ -16,11 +16,11 @@ const AdminProductsPage = () => {
     name: '',
     category: '',
     description: '',
-    basePrice: '',
     image: '',
     rating: 5.0,
-    durationValue: '1',
-    durationUnit: 'Bulan'
+    packages: [
+      { id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }
+    ]
   });
 
   const fetchProducts = async () => {
@@ -74,22 +74,23 @@ const AdminProductsPage = () => {
         image: formData.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500',
         rating: formData.rating,
         features: ['Fitur Premium 1', 'Fitur Premium 2'],
-        packages: [
-          {
-            id: `pkg-${Date.now()}`,
-            name: formData.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${formData.durationValue} ${formData.durationUnit}`,
-            durationUnit: formData.durationUnit,
-            durationValue: Number(formData.durationValue) || 1,
-            price: Number(formData.basePrice.replace(/\./g, ''))
-          }
-        ]
+        packages: formData.packages.map((pkg, i) => ({
+          id: `pkg-${Date.now()}-${i}`,
+          name: pkg.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${pkg.durationValue} ${pkg.durationUnit}`,
+          durationUnit: pkg.durationUnit,
+          durationValue: Number(pkg.durationValue) || 1,
+          price: Number(pkg.price.replace(/\./g, ''))
+        }))
       };
       
       await addDoc(collection(db, 'products'), newProduct);
       setIsAddModalOpen(false);
       fetchProducts();
       // Reset form
-      setFormData({ name: '', category: '', description: '', basePrice: '', image: '', rating: 5.0, durationValue: '1', durationUnit: 'Bulan' });
+      setFormData({ 
+        name: '', category: '', description: '', image: '', rating: 5.0, 
+        packages: [{ id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }] 
+      });
     } catch (error) {
       alert('Gagal menyimpan produk.');
     }
@@ -147,10 +148,30 @@ const AdminProductsPage = () => {
     }
   };
 
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
+  const handleAddPackage = () => {
+    setFormData({
+      ...formData,
+      packages: [...formData.packages, { id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }]
+    });
+  };
+
+  const handleRemovePackage = (index: number) => {
+    const updated = formData.packages.filter((_, i) => i !== index);
+    setFormData({ ...formData, packages: updated });
+  };
+
+  const handlePackageChange = (index: number, field: string, value: string) => {
+    const updated = [...formData.packages];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, packages: updated });
+  };
+
+  const handlePackagePriceChange = (index: number, value: string) => {
+    const rawValue = value.replace(/\D/g, '');
     const formatted = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    setFormData({...formData, basePrice: formatted});
+    const updated = [...formData.packages];
+    updated[index] = { ...updated[index], price: formatted };
+    setFormData({ ...formData, packages: updated });
   };
 
   const filtered = products.filter(p => {
@@ -303,34 +324,64 @@ const AdminProductsPage = () => {
                   <label className="text-sm font-medium text-slate-300">Deskripsi Produk</label>
                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} placeholder="Deskripsi lengkap..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Durasi Paket</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="number" 
-                      min="1"
-                      value={formData.durationValue} 
-                      onChange={e => setFormData({...formData, durationValue: e.target.value})} 
-                      disabled={formData.durationUnit === 'Unlimited'}
-                      className="w-1/3 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all disabled:opacity-50" 
-                    />
-                    <select 
-                      value={formData.durationUnit} 
-                      onChange={e => setFormData({...formData, durationUnit: e.target.value})} 
-                      className="w-2/3 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="Hari">Hari</option>
-                      <option value="Bulan">Bulan</option>
-                      <option value="Tahun">Tahun</option>
-                      <option value="Unlimited">Selamanya (Unlimited)</option>
-                    </select>
+                <div className="space-y-4 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-300">Daftar Paket Produk</label>
+                    <button type="button" onClick={handleAddPackage} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                      <Plus className="w-3 h-3" /> Tambah Paket
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {formData.packages.map((pkg, idx) => (
+                      <div key={pkg.id} className="flex flex-col sm:flex-row gap-3 p-4 bg-slate-800/30 border border-white/5 rounded-xl relative group">
+                        <div className="flex-1 space-y-1">
+                          <label className="text-xs text-slate-400">Durasi</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="number" min="1" 
+                              value={pkg.durationValue} 
+                              onChange={e => handlePackageChange(idx, 'durationValue', e.target.value)}
+                              disabled={pkg.durationUnit === 'Unlimited'}
+                              className="w-20 bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none disabled:opacity-50"
+                            />
+                            <select 
+                              value={pkg.durationUnit} 
+                              onChange={e => handlePackageChange(idx, 'durationUnit', e.target.value)}
+                              className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none appearance-none"
+                            >
+                              <option value="Hari">Hari</option>
+                              <option value="Bulan">Bulan</option>
+                              <option value="Tahun">Tahun</option>
+                              <option value="Unlimited">Unlimited</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <label className="text-xs text-slate-400">Harga (Rp)</label>
+                          <input 
+                            type="text" 
+                            value={pkg.price} 
+                            onChange={e => handlePackagePriceChange(idx, e.target.value)}
+                            placeholder="Contoh: 15.000"
+                            className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none"
+                          />
+                        </div>
+                        
+                        {formData.packages.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemovePackage(idx)}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Harga (Rp)</label>
-                  <input type="text" value={formData.basePrice} onChange={handlePriceChange} placeholder="Contoh: 15.000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
-                </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-slate-300">URL Gambar (Opsional)</label>
                   <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="https://..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                 </div>
@@ -346,7 +397,7 @@ const AdminProductsPage = () => {
               </button>
               <button 
                 onClick={handleSaveProduct}
-                disabled={!formData.name || !formData.category || !formData.basePrice}
+                disabled={!formData.name || !formData.category || formData.packages.some(p => !p.price)}
                 className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30 disabled:opacity-50"
               >
                 Simpan Produk
