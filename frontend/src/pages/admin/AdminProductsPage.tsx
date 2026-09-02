@@ -1,4 +1,5 @@
-import { Plus, Search, Edit2, Trash2, MoreVertical, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Edit2, Trash2, MoreVertical, Star, X } from 'lucide-react';
 
 const mockProducts = [
   {
@@ -22,6 +23,16 @@ const mockProducts = [
 ];
 
 const AdminProductsPage = () => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [categories, setCategories] = useState<string[]>(['Entertainment', 'Software', 'Design']);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('flash_categories');
+    if (saved) {
+      setCategories(JSON.parse(saved));
+    }
+  }, []);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -29,7 +40,10 @@ const AdminProductsPage = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Manajemen Produk</h1>
           <p className="text-slate-400">Kelola katalog produk, harga, dan ketersediaan.</p>
         </div>
-        <button className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2">
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2"
+        >
           <Plus className="w-5 h-5" />
           Tambah Produk
         </button>
@@ -49,8 +63,9 @@ const AdminProductsPage = () => {
           <div className="flex gap-2">
             <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer">
               <option value="all">Semua Kategori</option>
-              <option value="software">Software</option>
-              <option value="entertainment">Entertainment</option>
+              {categories.map((cat, idx) => (
+                <option key={idx} value={cat.toLowerCase()}>{cat}</option>
+              ))}
             </select>
             <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer">
               <option value="newest">Terbaru</option>
@@ -135,6 +150,69 @@ const AdminProductsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Product Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)}></div>
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex items-center justify-between p-6 border-b border-white/10 bg-slate-800/50">
+              <h2 className="text-xl font-bold text-white">Tambah Produk Baru</h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[70vh] overflow-y-auto space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">Nama Produk</label>
+                  <input type="text" placeholder="Contoh: Netflix Premium" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">Kategori</label>
+                  <select className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
+                    <option value="">Pilih Kategori</option>
+                    {categories.map((cat, idx) => (
+                      <option key={idx} value={cat.toLowerCase()}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-slate-300">Deskripsi Produk</label>
+                  <textarea rows={3} placeholder="Deskripsi lengkap..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">Harga Dasar (Rp)</label>
+                  <input type="number" placeholder="Contoh: 15000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">URL Gambar (Opsional)</label>
+                  <input type="text" placeholder="https://..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 bg-slate-800/50 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="px-6 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 font-medium transition-colors"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={() => {
+                  alert('Fitur tambah produk berhasil disimulasikan!');
+                  setIsAddModalOpen(false);
+                }}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30"
+              >
+                Simpan Produk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,11 +1,32 @@
 import { useState } from 'react';
-import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings } from 'lucide-react';
+import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings, Tags, Plus, Trash2 } from 'lucide-react';
 
 const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('flash_categories');
+    return saved ? JSON.parse(saved) : ['Entertainment', 'Software', 'Design'];
+  });
+  const [newCategory, setNewCategory] = useState('');
+
+  const handleSaveCategories = () => {
+    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
+      const updated = [...categories, newCategory.trim()];
+      setCategories(updated);
+      localStorage.setItem('flash_categories', JSON.stringify(updated));
+      setNewCategory('');
+    }
+  };
+
+  const handleRemoveCategory = (cat: string) => {
+    const updated = categories.filter(c => c !== cat);
+    setCategories(updated);
+    localStorage.setItem('flash_categories', JSON.stringify(updated));
+  };
 
   const tabs = [
     { id: 'general', label: 'Profil Toko', icon: Store },
+    { id: 'kategori', label: 'Kategori Produk', icon: Tags },
     { id: 'payment', label: 'Payment Gateway', icon: CreditCard },
     { id: 'notifications', label: 'Notifikasi', icon: Bell },
     { id: 'security', label: 'Keamanan', icon: ShieldCheck },
@@ -117,6 +138,56 @@ const AdminSettingsPage = () => {
                     <Save className="w-4 h-4" />
                     Simpan Perubahan
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: KATEGORI */}
+            {activeTab === 'kategori' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="border-b border-white/10 pb-4 mb-6">
+                  <h2 className="text-xl font-bold text-white">Kategori Produk</h2>
+                  <p className="text-sm text-slate-400 mt-1">Kelola daftar kategori yang akan muncul saat menambah produk baru.</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveCategories()}
+                      placeholder="Masukkan nama kategori baru..." 
+                      className="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                    />
+                    <button 
+                      onClick={handleSaveCategories}
+                      disabled={!newCategory.trim()}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/30"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Tambah
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-800/30 border border-white/10 rounded-xl overflow-hidden mt-6">
+                    <ul className="divide-y divide-white/5">
+                      {categories.map((cat, idx) => (
+                        <li key={idx} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+                          <span className="text-white font-medium">{cat}</span>
+                          <button 
+                            onClick={() => handleRemoveCategory(cat)}
+                            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                      {categories.length === 0 && (
+                        <li className="p-4 text-center text-slate-400">Belum ada kategori yang ditambahkan.</li>
+                      )}
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}
