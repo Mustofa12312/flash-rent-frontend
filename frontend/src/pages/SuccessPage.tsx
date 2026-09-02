@@ -1,7 +1,9 @@
 import { useLocation, Navigate, Link } from 'react-router-dom';
 import type { Product, Package } from '../types';
-import { CheckCircle2, Key, ExternalLink, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, Key, ExternalLink, Copy, Check, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface LocationState {
   product: Product;
@@ -19,6 +21,25 @@ export default function SuccessPage() {
 
   const { product, pkg, orderId } = state;
   const [copied, setCopied] = useState<string | null>(null);
+  const [rentalData, setRentalData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRental = async () => {
+      try {
+        const q = query(collection(db, 'rentals'), where('orderId', '==', orderId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          setRentalData(querySnapshot.docs[0].data());
+        }
+      } catch (error) {
+        console.error('Error fetching rental data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRental();
+  }, [orderId]);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -27,14 +48,22 @@ export default function SuccessPage() {
   };
 
   const getExpiryDate = () => {
-    if (pkg.durationType === 'UNLIMITED') return 'Selamanya';
-    const date = new Date();
-    // Simplified expiry calculation for mock
-    date.setDate(date.getDate() + (pkg.durationValue || 30));
-    return new Intl.DateTimeFormat('id-ID', {
-      day: 'numeric', month: 'long', year: 'numeric'
-    }).format(date);
+    if (rentalData?.expiresAt === null || pkg.durationType === 'UNLIMITED') return 'Selamanya';
+    if (rentalData?.expiresAt) {
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      }).format(new Date(rentalData.expiresAt));
+    }
+    return '-';
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-16">
@@ -87,38 +116,46 @@ export default function SuccessPage() {
           <h2 className="text-xl font-bold mb-6 relative z-10">Akses Produk</h2>
           <p className="text-slate-400 text-sm mb-8 relative z-10">Gunakan informasi berikut untuk mengakses produk digital Anda.</p>
           
-          {/* Mock Access based on category */}
+          {/* Access Data from DB */}
           <div className="space-y-6 relative z-10">
-            {product.category === 'Software' || product.category === 'Design' ? (
-              <div>
-                <p className="text-sm text-slate-400 mb-2">License Key</p>
-                <div className="flex items-center space-x-2">
-                  <code className="flex-1 bg-slate-800 px-4 py-3 rounded-xl font-mono text-emerald-400 border border-slate-700">
-                    XXXX-YYYY-ZZZZ-1234
-                  </code>
-                  <button 
-                    onClick={() => handleCopy('XXXX-YYYY-ZZZZ-1234', 'key')}
-                    className="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors border border-slate-700 text-slate-300"
-                  >
-                    {copied === 'key' ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
+            {rentalData?.accessData ? (
+              rentalData.accessData.type === 'LICENSE' ? (
                 <div>
-                  <p className="text-sm text-slate-400 mb-1">Username</p>
-                  <p className="font-mono font-semibold">customer@example.com</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-400 mb-1">Password</p>
+                  <p className="text-sm text-slate-400 mb-2">License Key</p>
                   <div className="flex items-center space-x-2">
-                    <p className="font-mono font-semibold">FlashRent2026!</p>
-                    <button onClick={() => handleCopy('FlashRent2026!', 'pw')} className="text-slate-400 hover:text-white">
-                      {copied === 'pw' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <code className="flex-1 bg-slate-800 px-4 py-3 rounded-xl font-mono text-emerald-400 border border-slate-700 break-all">
+                      {rentalData.accessData.licenseKey}
+                    </code>
+                    <button 
+                      onClick={() => handleCopy(rentalData.accessData.licenseKey, 'key')}
+                      className="p-3 bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors border border-slate-700 text-slate-300"
+                    >
+                      {copied === 'key' ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
                     </button>
                   </div>
+                  <p className="text-xs text-slate-500 mt-2">{rentalData.accessData.instructions}</p>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Username</p>
+                    <p className="font-mono font-semibold">{rentalData.accessData.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-400 mb-1">Password</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="font-mono font-semibold">{rentalData.accessData.password}</p>
+                      <button onClick={() => handleCopy(rentalData.accessData.password, 'pw')} className="text-slate-400 hover:text-white">
+                        {copied === 'pw' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">{rentalData.accessData.instructions}</p>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-6 text-slate-400">
+                Data akses belum tersedia atau sedang diproses.
               </div>
             )}
             

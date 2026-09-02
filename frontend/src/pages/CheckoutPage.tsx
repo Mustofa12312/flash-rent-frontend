@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Product, Package, PromoCode } from '../types';
 import { Shield, CreditCard, ChevronLeft, Tag } from 'lucide-react';
 import { useState } from 'react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../lib/firebase';
 
 // Form validation schema using Zod
 const checkoutSchema = z.object({
@@ -102,25 +104,42 @@ export default function CheckoutPage() {
   
   const finalPrice = Math.max(0, pkg.price - discountAmount);
 
-  const onSubmit = (data: CheckoutFormInputs) => {
+  const onSubmit = async (data: CheckoutFormInputs) => {
     setIsSubmitting(true);
-    // Simulate order creation & QRIS generation
-    setTimeout(() => {
-      console.log('Order created for:', data);
-      setIsSubmitting(false);
+    try {
+      const createOrderFn = httpsCallable(functions, 'createOrder');
       
-      const mockOrderId = `FR-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const payload = {
+        productId: product.id,
+        packageId: pkg.id,
+        customer: {
+          name: data.name,
+          email: data.email,
+          whatsapp: data.whatsapp
+        },
+        promoCode: appliedPromo?.code // Can be handled in backend later
+      };
+
+      const result = await createOrderFn(payload);
+      const orderData = result.data as any;
       
-      navigate(`/payment/${mockOrderId}`, { 
+      navigate(`/payment/${orderData.orderId}`, { 
         state: { 
           product, 
           pkg,
           customerDetails: data,
           promo: appliedPromo,
-          finalPrice
+          finalPrice: orderData.amount,
+          qrisUrl: orderData.qrisUrl,
+          expiresAt: orderData.expiresAt
         }
       });
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      alert(`Gagal membuat pesanan: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
