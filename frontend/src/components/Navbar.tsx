@@ -17,7 +17,7 @@ export default function Navbar() {
           </div>
           
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/products" className="text-slate-300 hover:text-white transition-colors">Products</Link>
+            <Link to="/catalog" className="text-slate-300 hover:text-white transition-colors">Products</Link>
             <Link to="/rentals" className="text-slate-300 hover:text-white transition-colors">My Rentals</Link>
             <Link to="/orders" className="text-slate-300 hover:text-white transition-colors">Orders</Link>
             <div className="h-6 w-px bg-slate-700"></div>
@@ -42,7 +42,7 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden bg-slate-900 border-b border-slate-800">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link to="/products" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Products</Link>
+            <Link to="/catalog" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Products</Link>
             <Link to="/rentals" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">My Rentals</Link>
             <Link to="/orders" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Orders</Link>
             <Link to="/account" className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:text-white hover:bg-slate-800">Account</Link>

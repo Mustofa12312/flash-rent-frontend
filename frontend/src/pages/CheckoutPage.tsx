@@ -41,7 +41,7 @@ export default function CheckoutPage() {
 
   // Redirect if accessed directly without product/package state
   if (!state || !state.product || !state.pkg) {
-    return <Navigate to="/products" replace />;
+    return <Navigate to="/catalog" replace />;
   }
 
   const { product, pkg } = state;

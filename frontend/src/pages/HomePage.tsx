@@ -16,7 +16,7 @@ export default function HomePage() {
           </p>
           <div className="flex justify-center space-x-4">
             <Link 
-              to="/products" 
+              to="/catalog" 
               className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-full transition-all duration-300 shadow-lg shadow-blue-500/30 flex items-center"
             >
               Jelajahi Produk <ArrowRight className="ml-2 h-5 w-5" />
@@ -68,7 +68,7 @@ export default function HomePage() {
             Checkout sebagai tamu (guest) dalam hitungan detik. Tanpa perlu daftar akun yang ribet.
           </p>
           <Link 
-            to="/products" 
+            to="/catalog" 
             className="bg-white text-blue-600 hover:bg-slate-50 font-bold py-4 px-10 rounded-full transition-all duration-300 shadow-xl inline-block"
           >
             Mulai Sekarang

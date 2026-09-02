@@ -18,7 +18,7 @@ export default function PaymentPage() {
 
   // Realistically we'd fetch order details, here we rely on state or mock it
   if (!state || !state.product || !state.pkg) {
-    return <Navigate to="/products" replace />;
+    return <Navigate to="/catalog" replace />;
   }
 
   const { product, pkg } = state;
@@ -93,7 +93,7 @@ export default function PaymentPage() {
             <h2 className="text-xl font-bold text-slate-900 mb-2">Waktu Pembayaran Habis</h2>
             <p className="text-slate-500 mb-6">QRIS sudah tidak berlaku. Silakan buat pesanan baru.</p>
             <button 
-              onClick={() => navigate('/products')}
+              onClick={() => navigate('/catalog')}
               className="bg-slate-900 text-white px-6 py-3 rounded-full hover:bg-slate-800 transition-colors"
             >
               Kembali ke Produk
