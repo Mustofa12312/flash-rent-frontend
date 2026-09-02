@@ -1,45 +1,11 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkExpiredRentals = exports.paymentWebhook = void 0;
-const admin = __importStar(require("firebase-admin"));
-// Inisialisasi Firebase Admin App sebelum meng-import module lain yang menggunakan db
-admin.initializeApp();
-// Export fungsi-fungsi Cloud
-var webhook_1 = require("./webhook");
-Object.defineProperty(exports, "paymentWebhook", { enumerable: true, get: function () { return webhook_1.paymentWebhook; } });
-var cron_1 = require("./cron");
-Object.defineProperty(exports, "checkExpiredRentals", { enumerable: true, get: function () { return cron_1.checkExpiredRentals; } });
+exports.checkExpiredRentals = exports.paymentWebhook = exports.createOrder = void 0;
+require("./config/firebase"); // Ensure Firebase is initialized first
+var orderController_1 = require("./controllers/orderController");
+Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return orderController_1.createOrder; } });
+var webhookController_1 = require("./controllers/webhookController");
+Object.defineProperty(exports, "paymentWebhook", { enumerable: true, get: function () { return webhookController_1.paymentWebhook; } });
+var expiryCron_1 = require("./cron/expiryCron");
+Object.defineProperty(exports, "checkExpiredRentals", { enumerable: true, get: function () { return expiryCron_1.checkExpiredRentals; } });
 //# sourceMappingURL=index.js.map

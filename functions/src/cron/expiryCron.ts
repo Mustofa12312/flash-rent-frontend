@@ -1,8 +1,6 @@
 import * as functions from 'firebase-functions/v2';
 
-import { getFirestore } from 'firebase-admin/firestore';
-
-const db = getFirestore();
+import { db } from '../config/firebase';
 
 /**
  * Cron job berjalan setiap tengah malam (00:00) zona waktu UTC

@@ -1,10 +1,8 @@
 import * as functions from 'firebase-functions/v2';
-import { getFirestore } from 'firebase-admin/firestore';
-import { RentalEngine, RentalCreateData } from './rentalEngine';
-import { AccessManager } from './accessManager';
-import { NotificationManager } from './notification';
-
-const db = getFirestore();
+import { db } from '../config/firebase';
+import { RentalEngine, RentalCreateData } from '../services/rentalEngine';
+import { AccessManager } from '../services/accessManager';
+import { NotificationManager } from '../services/notification';
 
 export const paymentWebhook = functions.https.onRequest(async (request, response) => {
   try {
@@ -42,11 +40,18 @@ export const paymentWebhook = functions.https.onRequest(async (request, response
     const category = order?.productCategory || 'SOFTWARE';
     const accessData = await AccessManager.assignAccessData(order?.productId || 'UNKNOWN', orderId, category);
 
-    // 4. Update status Order menjadi PAID
+    // 4. Update status Order dan Payment menjadi PAID
     await orderRef.update({
       status: 'PAID',
       updatedAt: new Date().toISOString()
     });
+
+    if (order?.paymentId) {
+      await db.collection('payments').doc(order.paymentId).update({
+        status: 'PAID',
+        updatedAt: new Date().toISOString()
+      });
+    }
 
     // 5. Memicu RentalEngine untuk membuat objek Rental aktif
     const rentalPayload: RentalCreateData = {

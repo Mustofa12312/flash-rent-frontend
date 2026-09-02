@@ -1,8 +1,5 @@
-import * as admin from 'firebase-admin';
+import './config/firebase'; // Ensure Firebase is initialized first
 
-// Inisialisasi Firebase Admin App sebelum meng-import module lain yang menggunakan db
-admin.initializeApp();
-
-// Export fungsi-fungsi Cloud
-export { paymentWebhook } from './webhook';
-export { checkExpiredRentals } from './cron';
+export { createOrder } from './controllers/orderController';
+export { paymentWebhook } from './controllers/webhookController';
+export { checkExpiredRentals } from './cron/expiryCron';

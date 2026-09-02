@@ -46,7 +46,7 @@ const mockResponse: any = {
 
 // Gunakan dynamic import agar initializeApp dieksekusi lebih dulu
 async function runTest() {
-  const { paymentWebhook } = await import('./webhook');
+  const { paymentWebhook } = await import('./controllers/webhookController');
 
   console.log('--- MEMULAI SIMULASI WEBHOOK ---');
   console.log(`Menerima payload pembayaran dari Gateway untuk Order: ${mockRequest.body.orderId}`);

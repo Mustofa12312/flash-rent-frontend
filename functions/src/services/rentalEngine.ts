@@ -1,7 +1,5 @@
 
-import { getFirestore } from 'firebase-admin/firestore';
-
-const db = getFirestore();
+import { db } from '../config/firebase';
 
 export interface RentalCreateData {
   orderId: string;
