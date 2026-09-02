@@ -14,6 +14,8 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import AdminPromoPage from './pages/admin/AdminPromoPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminCustomersPage from './pages/admin/AdminCustomersPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 // Security & Error Handling Pages
 import ErrorBoundary from './components/ErrorBoundary';
@@ -45,6 +47,8 @@ function App() {
             <Route path="promos" element={<AdminPromoPage />} />
             <Route path="products" element={<AdminProductsPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="customers" element={<AdminCustomersPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
             {/* Catch missing admin routes */}
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>
