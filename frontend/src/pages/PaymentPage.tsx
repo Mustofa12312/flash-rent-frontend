@@ -4,6 +4,8 @@ import type { Product, Package } from '../types';
 import { Loader2, QrCode, AlertCircle, ShieldCheck, MessageCircle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { QRCodeSVG } from 'qrcode.react';
+import { generateDynamicQRIS } from '../lib/qris';
 
 interface LocationState {
   product: Product;
@@ -26,11 +28,22 @@ export default function PaymentPage() {
   }
 
   const { product, pkg } = state;
+  const [qrisString, setQrisString] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'VERIFYING' | 'PAID' | 'EXPIRED'>('PENDING');
 
   useEffect(() => {
     if (!orderId) return;
+
+    // Generate Dynamic QRIS once the component mounts
+    if (state.finalPrice) {
+      try {
+        const dynamicQR = generateDynamicQRIS(state.finalPrice);
+        setQrisString(dynamicQR);
+      } catch (err) {
+        console.error("Failed to generate dynamic QRIS", err);
+      }
+    }
 
     // Listen to order status in real-time
     const unsubscribe = onSnapshot(doc(db, 'orders', orderId), (docSnap) => {
@@ -73,9 +86,14 @@ export default function PaymentPage() {
   }, [paymentStatus, state.expiresAt]);
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    
+    if (h > 0) {
+      return `${h} Jam ${m} Menit ${s.toString().padStart(2, '0')} Detik`;
+    }
+    return `${m} Menit ${s.toString().padStart(2, '0')} Detik`;
   };
 
   const formatIDR = (price: number) => {
@@ -164,9 +182,9 @@ export default function PaymentPage() {
         ) : (
           <div className="flex flex-col items-center">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 relative">
-              <div className="w-64 h-64 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center overflow-hidden">
-                {state.qrisUrl ? (
-                  <img src={state.qrisUrl} alt="QRIS" className="w-full h-full object-contain" />
+              <div className="w-64 h-64 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center overflow-hidden p-2 mb-4">
+                {qrisString ? (
+                  <QRCodeSVG value={qrisString} size={240} className="w-full h-full" />
                 ) : (
                   <>
                     <QrCode className="w-20 h-20 mb-2 text-slate-300" />
@@ -174,13 +192,17 @@ export default function PaymentPage() {
                   </>
                 )}
               </div>
+              <div className="text-center bg-blue-50 py-2 rounded-lg border border-blue-100">
+                <p className="text-sm text-slate-600">Scan QRIS Atas Nama:</p>
+                <p className="font-bold text-blue-700">FLASH RENT</p>
+              </div>
             </div>
 
             <p className="text-slate-600 mb-2 flex items-center">
               <Loader2 className="w-4 h-4 mr-2 animate-spin text-blue-500" />
               Selesaikan pembayaran dalam
             </p>
-            <div className="text-3xl font-mono font-bold text-slate-900 mb-8">
+            <div className="text-xl font-bold text-slate-900 mb-8">
               {formatTime(timeLeft)}
             </div>
 
