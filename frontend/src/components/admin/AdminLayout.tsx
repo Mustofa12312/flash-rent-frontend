@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, Menu } from 'lucide-react';
 
 const AdminLayout = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 flex">
       {/* Background Effects */}
@@ -11,18 +14,28 @@ const AdminLayout = () => {
         <div className="absolute top-[60%] -right-[10%] w-[40%] h-[60%] bg-purple-900/20 blur-[150px] rounded-full"></div>
       </div>
 
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      <main className="flex-1 ml-64 relative z-10 flex flex-col min-h-screen">
+      <main className="flex-1 lg:ml-64 relative z-10 flex flex-col min-h-screen max-w-full">
         {/* Top Navbar */}
-        <header className="h-20 border-b border-white/5 bg-slate-900/50 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-30">
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input 
-              type="text" 
-              placeholder="Cari transaksi, produk..." 
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder-slate-500"
-            />
+        <header className="h-20 border-b border-white/5 bg-slate-900/50 backdrop-blur-md px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+          
+          <div className="flex items-center gap-4">
+            <button 
+              className="lg:hidden text-slate-400 hover:text-white p-2 -ml-2"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            
+            <div className="relative w-full max-w-xs hidden sm:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Cari transaksi, produk..." 
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder-slate-500"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-6">
@@ -45,7 +58,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-8 overflow-x-hidden">
+        <div className="flex-1 p-4 sm:p-8 overflow-x-hidden">
           <Outlet />
         </div>
       </main>

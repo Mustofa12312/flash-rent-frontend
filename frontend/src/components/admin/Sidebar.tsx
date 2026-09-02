@@ -10,7 +10,12 @@ import {
   Tag
 } from 'lucide-react';
 
-const Sidebar = () => {
+interface SidebarProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}
+
+const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
     { name: 'Laporan', icon: BarChart2, path: '/admin/analytics' },
@@ -22,7 +27,18 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-slate-900/60 backdrop-blur-xl border-r border-white/10 z-20 flex flex-col transition-all">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-slate-900/90 lg:bg-slate-900/60 backdrop-blur-xl border-r border-white/10 z-50 flex flex-col transition-transform duration-300 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
       <div className="h-20 flex items-center px-8 border-b border-white/5">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Flash<span className="text-white">Admin</span>
@@ -36,6 +52,7 @@ const Sidebar = () => {
           <NavLink
             key={item.name}
             to={item.path}
+            onClick={() => setIsOpen(false)}
             end={item.path === '/admin'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
@@ -58,6 +75,7 @@ const Sidebar = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

@@ -20,8 +20,8 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Products</h3>
             <ul className="space-y-2 text-sm">
               <li><Link to="/catalog" className="hover:text-white transition-colors">All Products</Link></li>
-              <li><Link to="/products?category=software" className="hover:text-white transition-colors">Software</Link></li>
-              <li><Link to="/products?category=subscription" className="hover:text-white transition-colors">Subscriptions</Link></li>
+              <li><Link to="/catalog?category=software" className="hover:text-white transition-colors">Software</Link></li>
+              <li><Link to="/catalog?category=subscription" className="hover:text-white transition-colors">Subscriptions</Link></li>
             </ul>
           </div>
 

@@ -234,13 +234,13 @@ export default function CheckoutPage() {
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value)}
                     placeholder="Contoh: FLASHSALE20"
-                    className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 uppercase"
+                    className="flex-1 min-w-0 w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 uppercase"
                   />
                   <button 
                     type="button"
                     onClick={handleApplyPromo}
                     disabled={!promoCode.trim()}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+                    className="shrink-0 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-medium transition-colors disabled:opacity-50"
                   >
                     Terapkan
                   </button>
