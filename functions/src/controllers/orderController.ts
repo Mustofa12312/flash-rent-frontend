@@ -33,7 +33,10 @@ export const createOrder = functions.https.onCall(async (request) => {
       throw new functions.https.HttpsError('not-found', 'Package not found');
     }
     const packageData = packageSnap.data()!;
-    const amount = packageData.price;
+    
+    // Generate unique 3-digit code for manual static QRIS verification
+    const uniqueCode = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
+    const amount = packageData.price + uniqueCode;
 
     // 2. Create Order in DB
     const orderId = `FR-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
