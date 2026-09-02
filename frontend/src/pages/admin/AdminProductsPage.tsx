@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, X, Loader2, Database } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, query, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
+import { collection, query, getDocs, getDoc, deleteDoc, doc, addDoc } from 'firebase/firestore';
 
 const AdminProductsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -18,7 +18,9 @@ const AdminProductsPage = () => {
     description: '',
     basePrice: '',
     image: '',
-    rating: 5.0
+    rating: 5.0,
+    durationValue: '1',
+    durationUnit: 'Bulan'
   });
 
   const fetchProducts = async () => {
@@ -37,10 +39,19 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
-    const saved = localStorage.getItem('flash_categories');
-    if (saved) {
-      setCategories(JSON.parse(saved));
-    }
+    
+    // Fetch categories from Firestore settings
+    const fetchCategories = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'app'));
+        if (snap.exists() && snap.data().categories) {
+          setCategories(snap.data().categories);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      }
+    };
+    fetchCategories();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -65,11 +76,11 @@ const AdminProductsPage = () => {
         features: ['Fitur Premium 1', 'Fitur Premium 2'],
         packages: [
           {
-            id: 'pkg-1',
-            name: 'Paket Dasar',
-            durationUnit: 'Bulan',
-            durationValue: 1,
-            price: Number(formData.basePrice)
+            id: `pkg-${Date.now()}`,
+            name: formData.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${formData.durationValue} ${formData.durationUnit}`,
+            durationUnit: formData.durationUnit,
+            durationValue: Number(formData.durationValue) || 1,
+            price: Number(formData.basePrice.replace(/\./g, ''))
           }
         ]
       };
@@ -78,7 +89,7 @@ const AdminProductsPage = () => {
       setIsAddModalOpen(false);
       fetchProducts();
       // Reset form
-      setFormData({ name: '', category: '', description: '', basePrice: '', image: '', rating: 5.0 });
+      setFormData({ name: '', category: '', description: '', basePrice: '', image: '', rating: 5.0, durationValue: '1', durationUnit: 'Bulan' });
     } catch (error) {
       alert('Gagal menyimpan produk.');
     }
@@ -136,6 +147,12 @@ const AdminProductsPage = () => {
     }
   };
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const formatted = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    setFormData({...formData, basePrice: formatted});
+  };
+
   const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchCat = selectedCategory === 'all' || p.category.toLowerCase() === selectedCategory;
@@ -190,7 +207,7 @@ const AdminProductsPage = () => {
             >
               <option value="all">Semua Kategori</option>
               {categories.map((cat, idx) => (
-                <option key={idx} value={cat.toLowerCase()}>{cat}</option>
+                <option key={idx} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
@@ -278,7 +295,7 @@ const AdminProductsPage = () => {
                   <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
                     <option value="">Pilih Kategori</option>
                     {categories.map((cat, idx) => (
-                      <option key={idx} value={cat.toLowerCase()}>{cat}</option>
+                      <option key={idx} value={cat}>{cat}</option>
                     ))}
                   </select>
                 </div>
@@ -287,8 +304,31 @@ const AdminProductsPage = () => {
                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} placeholder="Deskripsi lengkap..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Harga Dasar (Rp)</label>
-                  <input type="number" value={formData.basePrice} onChange={e => setFormData({...formData, basePrice: e.target.value})} placeholder="Contoh: 15000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                  <label className="text-sm font-medium text-slate-300">Durasi Paket</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={formData.durationValue} 
+                      onChange={e => setFormData({...formData, durationValue: e.target.value})} 
+                      disabled={formData.durationUnit === 'Unlimited'}
+                      className="w-1/3 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all disabled:opacity-50" 
+                    />
+                    <select 
+                      value={formData.durationUnit} 
+                      onChange={e => setFormData({...formData, durationUnit: e.target.value})} 
+                      className="w-2/3 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="Hari">Hari</option>
+                      <option value="Bulan">Bulan</option>
+                      <option value="Tahun">Tahun</option>
+                      <option value="Unlimited">Selamanya (Unlimited)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-300">Harga (Rp)</label>
+                  <input type="text" value={formData.basePrice} onChange={handlePriceChange} placeholder="Contoh: 15.000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">URL Gambar (Opsional)</label>
