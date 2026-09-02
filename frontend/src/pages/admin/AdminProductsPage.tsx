@@ -25,6 +25,10 @@ const mockProducts = [
 const AdminProductsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [categories, setCategories] = useState<string[]>(['Entertainment', 'Software', 'Design']);
+  const [products, setProducts] = useState(mockProducts);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
 
   useEffect(() => {
     const saved = localStorage.getItem('flash_categories');
@@ -32,6 +36,20 @@ const AdminProductsPage = () => {
       setCategories(JSON.parse(saved));
     }
   }, []);
+
+  const handleDelete = (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
+      setProducts(prev => prev.filter(p => p.id !== id));
+    }
+  };
+
+  const filtered = products
+    .filter(p => {
+      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCat = selectedCategory === 'all' || p.category.toLowerCase() === selectedCategory;
+      return matchSearch && matchCat;
+    })
+    .sort((a, b) => sortBy === 'popular' ? b.rating - a.rating : 0);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -56,18 +74,28 @@ const AdminProductsPage = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari produk..." 
               className="w-full bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
             />
           </div>
           <div className="flex gap-2">
-            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer">
+            <select 
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
+            >
               <option value="all">Semua Kategori</option>
               {categories.map((cat, idx) => (
                 <option key={idx} value={cat.toLowerCase()}>{cat}</option>
               ))}
             </select>
-            <select className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer">
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
+            >
               <option value="newest">Terbaru</option>
               <option value="popular">Terpopuler</option>
             </select>
@@ -88,7 +116,7 @@ const AdminProductsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {mockProducts.map((product) => (
+              {filtered.map((product) => (
                 <tr key={product.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
@@ -123,10 +151,10 @@ const AdminProductsPage = () => {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors" title="Edit">
+                      <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors" title="Edit" onClick={() => alert(`Edit produk: ${product.name}\n(Fitur edit form akan tersedia di fase backend)`)}>
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Hapus">
+                      <button className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Hapus" onClick={() => handleDelete(product.id)}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                       <button className="p-2 text-slate-400 hover:text-white transition-colors" title="Lainnya">
@@ -142,7 +170,7 @@ const AdminProductsPage = () => {
         
         {/* Pagination */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between text-sm text-slate-400">
-          <div>Menampilkan 1 hingga {mockProducts.length} dari {mockProducts.length} produk</div>
+          <div className="text-sm">Menampilkan {filtered.length} dari {products.length} produk</div>
           <div className="flex gap-1">
             <button className="px-3 py-1 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50">Prev</button>
             <button className="px-3 py-1 rounded-md bg-blue-600 text-white">1</button>

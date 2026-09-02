@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { TrendingUp, Users, Package, DollarSign, ArrowUpRight } from 'lucide-react';
 
 const statCards = [
@@ -22,9 +23,9 @@ const DashboardPage = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Ringkasan Dasbor</h1>
           <p className="text-slate-400">Pantau performa bisnis Flash Rent hari ini.</p>
         </div>
-        <button className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium transition-colors flex items-center gap-2">
+        <Link to="/admin/orders" className="px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-medium transition-colors flex items-center gap-2">
           Unduh Laporan <ArrowUpRight className="w-4 h-4" />
-        </button>
+        </Link>
       </div>
 
       {/* Stats Grid */}
@@ -54,7 +55,7 @@ const DashboardPage = () => {
       <div className="bg-slate-900/40 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Transaksi Terakhir</h2>
-          <button className="text-sm text-blue-400 hover:text-blue-300 font-medium">Lihat Semua</button>
+          <Link to="/admin/orders" className="text-sm text-blue-400 hover:text-blue-300 font-medium">Lihat Semua</Link>
         </div>
         
         <div className="overflow-x-auto">

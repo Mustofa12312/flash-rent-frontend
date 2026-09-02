@@ -28,18 +28,18 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Support</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Pusat Bantuan</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Syarat & Ketentuan</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Kebijakan Privasi</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-white font-semibold mb-4">Connect</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">Twitter</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Instagram</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">WhatsApp</a></li>
+              <li><a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Twitter</a></li>
+              <li><a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</a></li>
+              <li><a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
             </ul>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BarChart as BarIcon, PieChart as PieIcon, TrendingUp, Users, Activity } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -47,6 +48,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 const AnalyticsPage = () => {
+  const [period, setPeriod] = useState('monthly');
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -55,9 +58,15 @@ const AnalyticsPage = () => {
           <p className="text-slate-400">Visualisasi data dan performa bisnis Flash Rent.</p>
         </div>
         <div className="flex bg-slate-900/50 rounded-xl p-1 border border-white/10">
-          <button className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium shadow-lg">Bulanan</button>
-          <button className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm font-medium transition-colors">Mingguan</button>
-          <button className="px-4 py-2 rounded-lg text-slate-400 hover:text-white text-sm font-medium transition-colors">Tahunan</button>
+          {[{key: 'monthly', label: 'Bulanan'}, {key: 'weekly', label: 'Mingguan'}, {key: 'yearly', label: 'Tahunan'}].map(p => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${period === p.key ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 

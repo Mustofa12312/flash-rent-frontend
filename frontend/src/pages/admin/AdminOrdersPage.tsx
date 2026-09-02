@@ -12,6 +12,19 @@ const mockOrders = [
 
 const AdminOrdersPage = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleExportCSV = () => {
+    const headers = 'Order ID,Customer,Email,Product,Amount,Date,Status\n';
+    const rows = mockOrders.map(o => `${o.id},${o.customer},${o.email},${o.product},${o.amount},${o.date},${o.status}`).join('\n');
+    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'flash-rent-orders.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -36,7 +49,7 @@ const AdminOrdersPage = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Daftar Pesanan</h1>
           <p className="text-slate-400">Pantau seluruh riwayat transaksi dan status penyewaan.</p>
         </div>
-        <button className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium transition-all flex items-center gap-2">
+        <button onClick={handleExportCSV} className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium transition-all flex items-center gap-2">
           <Download className="w-4 h-4" />
           Ekspor CSV
         </button>
@@ -66,6 +79,8 @@ const AdminOrdersPage = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Cari Order ID / Nama..." 
                 className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-white"
               />
@@ -93,6 +108,11 @@ const AdminOrdersPage = () => {
             <tbody>
               {mockOrders
                 .filter(order => activeTab === 'all' || order.status === activeTab)
+                .filter(order => {
+                  if (!searchQuery.trim()) return true;
+                  const q = searchQuery.toLowerCase();
+                  return order.id.toLowerCase().includes(q) || order.customer.toLowerCase().includes(q) || order.product.toLowerCase().includes(q);
+                })
                 .map((order) => (
                 <tr key={order.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                   <td className="py-4 px-6">
