@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Order, Payment, Product, Package } from '../../types';
 
