@@ -1,30 +1,53 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import CustomerLayout from './layouts/CustomerLayout';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
-import ProductsPage from './pages/ProductsPage';
+import CatalogPage from './pages/CatalogPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CheckoutPage from './pages/CheckoutPage';
 import PaymentPage from './pages/PaymentPage';
 import SuccessPage from './pages/SuccessPage';
 
+// Admin Pages
+import AdminLayout from './components/admin/AdminLayout';
+import DashboardPage from './pages/admin/DashboardPage';
+import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+
+// Dummy wrapper for public pages to keep Navbar
+const PublicLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen bg-slate-50 flex flex-col">
+    <Navbar />
+    <main className="flex-grow">
+      {children}
+    </main>
+    
+    <footer className="bg-slate-900 text-slate-400 py-12 text-center mt-auto border-t border-slate-800">
+      <p>© {new Date().getFullYear()} Flash Rent. All rights reserved.</p>
+    </footer>
+  </div>
+);
+
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
-        <Route path="/" element={<CustomerLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="product/:id" element={<ProductDetailPage />} />
-          <Route path="checkout" element={<CheckoutPage />} />
-          <Route path="payment/:orderId" element={<PaymentPage />} />
-          <Route path="success/:orderId" element={<SuccessPage />} />
-          {/* Placeholder for future pages */}
-          <Route path="rentals" element={<div className="p-20 text-center text-2xl font-bold">My Rentals (Coming Soon)</div>} />
-          <Route path="orders" element={<div className="p-20 text-center text-2xl font-bold">Orders (Coming Soon)</div>} />
-          <Route path="account" element={<div className="p-20 text-center text-2xl font-bold">Account (Coming Soon)</div>} />
+        {/* Admin Routes (No public Navbar) */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
+
+        {/* Public Routes */}
+        <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+        <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
+        <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
+        <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
+        <Route path="/payment" element={<PublicLayout><PaymentPage /></PublicLayout>} />
+        <Route path="/success" element={<PublicLayout><SuccessPage /></PublicLayout>} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
