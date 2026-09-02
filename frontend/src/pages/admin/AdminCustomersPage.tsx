@@ -1,49 +1,33 @@
-import { useState } from 'react';
-import { Search, MoreVertical, Mail, Ban, CheckCircle, ExternalLink, Download } from 'lucide-react';
-
-const mockCustomers = [
-  {
-    id: 'USR-001',
-    name: 'Budi Santoso',
-    email: 'budi.s@example.com',
-    whatsapp: '081234567890',
-    totalOrders: 15,
-    totalSpent: 1250000,
-    status: 'ACTIVE',
-    lastActive: '2023-10-24T10:30:00Z',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Budi'
-  },
-  {
-    id: 'USR-002',
-    name: 'Siti Rahma',
-    email: 'sitirahma.99@example.com',
-    whatsapp: '085678901234',
-    totalOrders: 3,
-    totalSpent: 350000,
-    status: 'ACTIVE',
-    lastActive: '2023-10-23T15:45:00Z',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Siti'
-  },
-  {
-    id: 'USR-003',
-    name: 'Reza Pahlevi',
-    email: 'reza.p@example.com',
-    whatsapp: '089876543210',
-    totalOrders: 0,
-    totalSpent: 0,
-    status: 'BANNED',
-    lastActive: '2023-09-10T08:15:00Z',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Reza'
-  }
-];
+import { useState, useEffect } from 'react';
+import { Search, MoreVertical, Mail, Ban, CheckCircle, ExternalLink, Download, Loader2 } from 'lucide-react';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const AdminCustomersPage = () => {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'CUSTOMER'));
+        const snap = await getDocs(q);
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCustomers(data);
+      } catch (error) {
+        console.error("Failed to fetch customers", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
   const handleExportCSV = () => {
-    const headers = 'ID,Name,Email,WhatsApp,Orders,Spent,Status\n';
-    const rows = mockCustomers.map(c => `${c.id},${c.name},${c.email},${c.whatsapp},${c.totalOrders},${c.totalSpent},${c.status}`).join('\n');
+    const headers = 'ID,Name,Email,Status\n';
+    const rows = customers.map(c => `${c.id},${c.displayName || 'Anon'},${c.email},${c.status || 'ACTIVE'}`).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -53,9 +37,13 @@ const AdminCustomersPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const filtered = mockCustomers.filter(c => {
-    const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.email.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchStatus = statusFilter === 'all' || c.status.toLowerCase() === statusFilter;
+  const filtered = customers.filter(c => {
+    const name = c.displayName || '';
+    const email = c.email || '';
+    const status = c.status || 'ACTIVE';
+    
+    const matchSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || email.toLowerCase().includes(searchQuery.toLowerCase()) || c.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchStatus = statusFilter === 'all' || status.toLowerCase() === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -97,14 +85,17 @@ const AdminCustomersPage = () => {
           </div>
         </div>
 
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/10 text-slate-400 text-sm">
                 <th className="py-3 px-4 font-medium">Pengguna</th>
                 <th className="py-3 px-4 font-medium">Kontak</th>
-                <th className="py-3 px-4 font-medium">Total Pesanan</th>
-                <th className="py-3 px-4 font-medium">Total Pengeluaran</th>
                 <th className="py-3 px-4 font-medium">Status</th>
                 <th className="py-3 px-4 font-medium text-right">Aksi</th>
               </tr>
@@ -115,26 +106,19 @@ const AdminCustomersPage = () => {
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-slate-800 overflow-hidden border border-white/10">
-                        <img src={customer.avatar} alt={customer.name} className="w-full h-full object-cover" />
+                        <img src={customer.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${customer.displayName}`} alt={customer.displayName} className="w-full h-full object-cover" />
                       </div>
                       <div>
-                        <div className="font-semibold text-white">{customer.name}</div>
+                        <div className="font-semibold text-white">{customer.displayName || 'Guest User'}</div>
                         <div className="text-xs text-slate-400 font-mono">{customer.id}</div>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-4">
                     <div className="text-sm text-slate-300">{customer.email}</div>
-                    <div className="text-xs text-slate-500">{customer.whatsapp}</div>
-                  </td>
-                  <td className="py-4 px-4 font-medium text-white">
-                    {customer.totalOrders}
-                  </td>
-                  <td className="py-4 px-4 font-medium text-blue-400">
-                    Rp {customer.totalSpent.toLocaleString('id-ID')}
                   </td>
                   <td className="py-4 px-4">
-                    {customer.status === 'ACTIVE' ? (
+                    {(!customer.status || customer.status === 'ACTIVE') ? (
                       <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-xs font-medium text-emerald-400 w-max">
                         <CheckCircle className="w-3.5 h-3.5" />
                         Aktif
@@ -161,13 +145,19 @@ const AdminCustomersPage = () => {
                   </td>
                 </tr>
               ))}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400">Belum ada pelanggan ditemukan.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        )}
         
         {/* Pagination Dummy */}
         <div className="mt-6 flex items-center justify-between text-sm text-slate-400 border-t border-white/10 pt-4">
-          <div>Menampilkan {filtered.length} dari {mockCustomers.length} pelanggan</div>
+          <div>Menampilkan {filtered.length} dari {customers.length} pelanggan</div>
           <div className="flex gap-2">
             <button className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors disabled:opacity-50">Sebelumnnya</button>
             <button className="px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors">Selanjutnya</button>

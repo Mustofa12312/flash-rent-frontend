@@ -17,8 +17,19 @@ service cloud.firestore {
 
     // 1. Aturan untuk koleksi users
     match /users/{userId} {
-      // User bisa membaca dan mengedit datanya sendiri. Admin bisa baca/tulis semua.
-      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // User bisa membaca datanya sendiri. Admin bisa baca semua.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      
+      // Saat mendaftar (create), user hanya boleh mendaftar dengan role CUSTOMER
+      allow create: if isAuthenticated() && (request.auth.uid == userId && request.resource.data.role == 'CUSTOMER');
+
+      // Saat update, user TIDAK boleh mengubah field 'role' mereka sendiri. Admin bebas.
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (request.auth.uid == userId && request.resource.data.role == resource.data.role)
+      );
+      
+      allow delete: if isAdmin();
     }
 
     // 2. Aturan untuk koleksi orders
@@ -43,6 +54,22 @@ service cloud.firestore {
       
       // HANYA Admin yang boleh membuat atau mengubah data rental.
       // (Ini mencegah user membuat lisensi gratis untuk mereka sendiri).
+      allow write: if isAdmin();
+    }
+    
+    // Aturan untuk Promos
+    match /promos/{promoId} {
+      // Siapapun bisa membaca (untuk validasi kode promo saat checkout)
+      allow read: if true;
+      // Hanya Admin yang bisa menambah, mengubah, atau menghapus promo
+      allow write: if isAdmin();
+    }
+
+    // Aturan untuk Settings
+    match /settings/{settingId} {
+      // Siapapun bisa membaca pengaturan aplikasi dasar
+      allow read: if true;
+      // Hanya Admin yang bisa mengubah pengaturan
       allow write: if isAdmin();
     }
     

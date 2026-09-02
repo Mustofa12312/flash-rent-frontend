@@ -10,6 +10,13 @@ const AdminOrdersPage = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setOpenDropdownId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -243,9 +250,45 @@ const AdminOrdersPage = () => {
                           </button>
                         </div>
                       ) : (
-                        <button className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-                          <MoreHorizontal className="w-5 h-5" />
-                        </button>
+                        <div className="relative inline-block text-left" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            onClick={() => setOpenDropdownId(openDropdownId === order.id ? null : order.id)}
+                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                          >
+                            <MoreHorizontal className="w-5 h-5" />
+                          </button>
+                          
+                          {openDropdownId === order.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                              <div className="py-1">
+                                {order.status === 'PENDING' && (
+                                  <>
+                                    <button 
+                                      onClick={() => { setOpenDropdownId(null); handleVerify(order.id, 'APPROVE'); }}
+                                      className="w-full text-left px-4 py-2 text-sm text-emerald-400 hover:bg-white/5 font-medium"
+                                    >
+                                      Tandai Dibayar
+                                    </button>
+                                    <button 
+                                      onClick={() => { setOpenDropdownId(null); handleVerify(order.id, 'REJECT'); }}
+                                      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 font-medium"
+                                    >
+                                      Batalkan Pesanan
+                                    </button>
+                                  </>
+                                )}
+                                {order.status !== 'PENDING' && (
+                                  <button 
+                                    onClick={() => { setOpenDropdownId(null); alert('Fitur detail akan tersedia segera.'); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-white/5"
+                                  >
+                                    Lihat Detail
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>

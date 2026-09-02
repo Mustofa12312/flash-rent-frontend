@@ -1,44 +1,88 @@
-import { useState } from 'react';
-import { Plus, Search, Tag, Edit2, Trash2, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Tag, Edit2, Trash2, X, Loader2 } from 'lucide-react';
 import type { PromoCode } from '../../types';
-
-const mockPromos: PromoCode[] = [
-  {
-    id: 'promo-1',
-    code: 'FLASHSALE20',
-    discountType: 'PERCENTAGE',
-    discountValue: 20,
-    maxDiscount: 50000,
-    minPurchase: 100000,
-    quota: 100,
-    used: 45,
-    expiresAt: new Date(Date.now() + 86400000 * 7).toISOString(),
-    status: 'ACTIVE',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'promo-2',
-    code: 'HEMAT50K',
-    discountType: 'FIXED',
-    discountValue: 50000,
-    minPurchase: 200000,
-    quota: 50,
-    used: 50,
-    expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(),
-    status: 'INACTIVE',
-    createdAt: new Date().toISOString()
-  }
-];
+import { db } from '../../lib/firebase';
+import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 const AdminPromoPage = () => {
-  const [promos, setPromos] = useState(mockPromos);
+  const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleDelete = (id: string) => {
+  // Create Form State
+  const [newCode, setNewCode] = useState('');
+  const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [discountValue, setDiscountValue] = useState('');
+  const [minPurchase, setMinPurchase] = useState('');
+  const [quota, setQuota] = useState('');
+
+  const fetchPromos = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'promos'));
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PromoCode[];
+      setPromos(data);
+    } catch (error) {
+      console.error("Failed to fetch promos", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPromos();
+  }, []);
+
+  const handleDelete = async (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus kode promo ini?')) {
-      setPromos(prev => prev.filter(p => p.id !== id));
+      try {
+        await deleteDoc(doc(db, 'promos', id));
+        setPromos(prev => prev.filter(p => p.id !== id));
+      } catch (error) {
+        console.error("Failed to delete promo", error);
+        alert('Gagal menghapus promo');
+      }
+    }
+  };
+
+  const handleCreatePromo = async () => {
+    if (!newCode || !discountValue || !quota) {
+      alert('Mohon lengkapi data promo!');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const promoId = `promo-${Date.now()}`;
+      const newPromo: PromoCode = {
+        id: promoId,
+        code: newCode.toUpperCase(),
+        discountType,
+        discountValue: Number(discountValue),
+        minPurchase: minPurchase ? Number(minPurchase) : 0,
+        quota: Number(quota),
+        used: 0,
+        expiresAt: new Date(Date.now() + 86400000 * 30).toISOString(), // +30 Days
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, 'promos', promoId), newPromo);
+      setPromos(prev => [newPromo, ...prev]);
+      
+      setIsCreateOpen(false);
+      setNewCode('');
+      setDiscountValue('');
+      setMinPurchase('');
+      setQuota('');
+      alert('Promo berhasil dibuat!');
+    } catch (error) {
+      console.error("Failed to create promo", error);
+      alert('Gagal membuat promo');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -86,6 +130,11 @@ const AdminPromoPage = () => {
           </div>
         </div>
 
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -158,9 +207,16 @@ const AdminPromoPage = () => {
                   </td>
                 </tr>
               ))}
+              
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">Belum ada promo yang ditambahkan.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Create Promo Modal */}
@@ -175,35 +231,37 @@ const AdminPromoPage = () => {
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-300">Kode Promo</label>
-                <input type="text" placeholder="Contoh: HEMAT30" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white uppercase focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} placeholder="Contoh: HEMAT30" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white uppercase focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Tipe Diskon</label>
-                  <select className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all appearance-none">
+                  <select value={discountType} onChange={e => setDiscountType(e.target.value as any)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all appearance-none">
                     <option value="PERCENTAGE">Persentase (%)</option>
                     <option value="FIXED">Nominal Tetap (Rp)</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Nilai Diskon</label>
-                  <input type="number" placeholder="20" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                  <input type="number" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder="20" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Min. Pembelian (Rp)</label>
-                  <input type="number" placeholder="100000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                  <input type="number" value={minPurchase} onChange={e => setMinPurchase(e.target.value)} placeholder="100000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Kuota</label>
-                  <input type="number" placeholder="100" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                  <input type="number" value={quota} onChange={e => setQuota(e.target.value)} placeholder="100" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
                 </div>
               </div>
             </div>
             <div className="p-6 border-t border-white/10 bg-slate-800/50 flex justify-end gap-3">
-              <button onClick={() => setIsCreateOpen(false)} className="px-6 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 font-medium transition-colors">Batal</button>
-              <button onClick={() => { alert('Promo berhasil dibuat! (simulasi)'); setIsCreateOpen(false); }} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30">Simpan Promo</button>
+              <button onClick={() => setIsCreateOpen(false)} disabled={saving} className="px-6 py-2.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 font-medium transition-colors">Batal</button>
+              <button onClick={handleCreatePromo} disabled={saving} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Simpan Promo'}
+              </button>
             </div>
           </div>
         </div>

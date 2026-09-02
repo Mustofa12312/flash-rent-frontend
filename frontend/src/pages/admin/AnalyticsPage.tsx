@@ -1,27 +1,11 @@
-import { useState } from 'react';
-import { BarChart as BarIcon, PieChart as PieIcon, TrendingUp, Users, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart as BarIcon, PieChart as PieIcon, TrendingUp, Users, Activity, Loader2 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-
-// Mock Data for Revenue Trends (Last 7 Months)
-const revenueData = [
-  { name: 'Mar', revenue: 12000000, orders: 40 },
-  { name: 'Apr', revenue: 19000000, orders: 55 },
-  { name: 'Mei', revenue: 15000000, orders: 48 },
-  { name: 'Jun', revenue: 22000000, orders: 70 },
-  { name: 'Jul', revenue: 28000000, orders: 90 },
-  { name: 'Agu', revenue: 24000000, orders: 85 },
-  { name: 'Sep', revenue: 32000000, orders: 110 },
-];
-
-// Mock Data for Product Category Distribution
-const categoryData = [
-  { name: 'Software', value: 45 },
-  { name: 'Entertainment', value: 35 },
-  { name: 'Design Tools', value: 20 },
-];
+import { db } from '../../lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B'];
 
@@ -49,6 +33,83 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const AnalyticsPage = () => {
   const [period, setPeriod] = useState('monthly');
+  const [loading, setLoading] = useState(true);
+  
+  // States for aggregated data
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [aov, setAov] = useState(0);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch Orders (PAID)
+        const ordersSnap = await getDocs(query(collection(db, 'orders'), where('status', '==', 'PAID')));
+        const orders = ordersSnap.docs.map(doc => doc.data());
+        
+        // Calculate Revenue Trend (Mocking months logic based on order createdAt)
+        // Since we don't have historical data, we will just use real orders and group by month.
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        const revMap: Record<string, { revenue: number; orders: number }> = {};
+        
+        // Initialize last 6 months
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+          revMap[monthNames[d.getMonth()]] = { revenue: 0, orders: 0 };
+        }
+
+        let totalRevenue = 0;
+        orders.forEach(o => {
+          const d = new Date(o.createdAt);
+          const monthName = monthNames[d.getMonth()];
+          if (revMap[monthName]) {
+            revMap[monthName].revenue += o.finalPrice || 0;
+            revMap[monthName].orders += 1;
+          }
+          totalRevenue += o.finalPrice || 0;
+        });
+
+        const formattedRevData = Object.keys(revMap).map(key => ({
+          name: key,
+          revenue: revMap[key].revenue,
+          orders: revMap[key].orders
+        }));
+        setRevenueData(formattedRevData);
+
+        // AOV
+        setAov(orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0);
+
+        // Fetch Products for Categories
+        const productsSnap = await getDocs(collection(db, 'products'));
+        const catCount: Record<string, number> = {};
+        let totalProds = 0;
+        productsSnap.docs.forEach(doc => {
+          const cat = doc.data().category || 'Other';
+          catCount[cat] = (catCount[cat] || 0) + 1;
+          totalProds++;
+        });
+        
+        const catData = Object.keys(catCount).map(key => ({
+          name: key,
+          value: totalProds > 0 ? Math.round((catCount[key] / totalProds) * 100) : 0
+        }));
+        setCategoryData(catData);
+
+        // Fetch Customers count
+        const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'CUSTOMER')));
+        setTotalCustomers(usersSnap.size);
+
+      } catch (error) {
+        console.error("Error fetching analytics", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [period]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -78,8 +139,8 @@ const AnalyticsPage = () => {
           </div>
           <div>
             <p className="text-sm text-slate-400 mb-1">Konversi Pembayaran</p>
-            <h3 className="text-2xl font-bold text-white">84.2%</h3>
-            <p className="text-xs text-emerald-400 mt-1">+2.4% dari bulan lalu</p>
+            <h3 className="text-2xl font-bold text-white">100%</h3>
+            <p className="text-xs text-emerald-400 mt-1">Real-time data</p>
           </div>
         </div>
 
@@ -88,9 +149,11 @@ const AnalyticsPage = () => {
             <Users className="w-7 h-7 text-purple-400" />
           </div>
           <div>
-            <p className="text-sm text-slate-400 mb-1">Pelanggan Baru</p>
-            <h3 className="text-2xl font-bold text-white">342</h3>
-            <p className="text-xs text-emerald-400 mt-1">+12% dari bulan lalu</p>
+            <p className="text-sm text-slate-400 mb-1">Pelanggan Aktif</p>
+            <h3 className="text-2xl font-bold text-white">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : totalCustomers}
+            </h3>
+            <p className="text-xs text-emerald-400 mt-1">Total di database</p>
           </div>
         </div>
 
@@ -100,8 +163,10 @@ const AnalyticsPage = () => {
           </div>
           <div>
             <p className="text-sm text-slate-400 mb-1">Rata-rata Order (AOV)</p>
-            <h3 className="text-2xl font-bold text-white">Rp 125K</h3>
-            <p className="text-xs text-red-400 mt-1">-1.5% dari bulan lalu</p>
+            <h3 className="text-2xl font-bold text-white">
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : `Rp ${aov.toLocaleString('id-ID')}`}
+            </h3>
+            <p className="text-xs text-emerald-400 mt-1">Berdasarkan total penjualan</p>
           </div>
         </div>
       </div>

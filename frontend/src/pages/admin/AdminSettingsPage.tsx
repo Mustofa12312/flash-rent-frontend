@@ -1,21 +1,77 @@
-import { useState } from 'react';
-import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings, Tags, Plus, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings, Tags, Plus, Trash2, Loader2 } from 'lucide-react';
+import { db } from '../../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
-  const [categories, setCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem('flash_categories');
-    return saved ? JSON.parse(saved) : ['Entertainment', 'Software', 'Design'];
-  });
-  const [newCategory, setNewCategory] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveCategories = () => {
+  // Settings State
+  const [categories, setCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  
+  const [storeName, setStoreName] = useState('Flash Rent');
+  const [storeEmail, setStoreEmail] = useState('support@flashrent.com');
+  const [storeDescription, setStoreDescription] = useState('Platform sewa lisensi premium dan akun digital terbaik.');
+  
+  const [apiKey, setApiKey] = useState('sk_test_12345abcdefghijklmnopqrstuvwxyz');
+  const [sandboxMode, setSandboxMode] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'settings', 'app');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.categories) setCategories(data.categories);
+          if (data.storeName) setStoreName(data.storeName);
+          if (data.storeEmail) setStoreEmail(data.storeEmail);
+          if (data.storeDescription) setStoreDescription(data.storeDescription);
+          if (data.apiKey) setApiKey(data.apiKey);
+          if (data.sandboxMode !== undefined) setSandboxMode(data.sandboxMode);
+        } else {
+          // If no settings exist yet, set defaults
+          setCategories(['Entertainment', 'Software', 'Design']);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const saveSettingsToFirestore = async (updates: any) => {
+    setSaving(true);
+    try {
+      const docRef = doc(db, 'settings', 'app');
+      await setDoc(docRef, updates, { merge: true });
+      alert('Pengaturan berhasil disimpan!');
+    } catch (error) {
+      console.error("Failed to save settings", error);
+      alert('Gagal menyimpan pengaturan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveGeneral = () => {
+    saveSettingsToFirestore({ storeName, storeEmail, storeDescription });
+  };
+
+  const handleSavePayment = () => {
+    saveSettingsToFirestore({ apiKey, sandboxMode });
+  };
+
+  const handleSaveCategories = async () => {
     const newCat = newCategory.trim();
     if (!newCat) return;
 
-    // Check for duplicates case-insensitively
     const isDuplicate = categories.some(c => c.toLowerCase() === newCat.toLowerCase());
-    
     if (isDuplicate) {
       alert(`Kategori "${newCat}" sudah ada!`);
       return;
@@ -23,16 +79,27 @@ const AdminSettingsPage = () => {
 
     const updated = [...categories, newCat];
     setCategories(updated);
-    localStorage.setItem('flash_categories', JSON.stringify(updated));
     setNewCategory('');
-    alert(`Kategori "${newCat}" berhasil ditambahkan!`);
+    
+    // Save to firestore
+    try {
+      await setDoc(doc(db, 'settings', 'app'), { categories: updated }, { merge: true });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleRemoveCategory = (cat: string) => {
+  const handleRemoveCategory = async (cat: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus kategori "${cat}"?`)) {
       const updated = categories.filter(c => c !== cat);
       setCategories(updated);
-      localStorage.setItem('flash_categories', JSON.stringify(updated));
+      
+      // Save to firestore
+      try {
+        await setDoc(doc(db, 'settings', 'app'), { categories: updated }, { merge: true });
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -52,6 +119,11 @@ const AdminSettingsPage = () => {
         <p className="text-slate-400">Konfigurasi seluruh aspek aplikasi Flash Rent dari satu tempat.</p>
       </div>
 
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      ) : (
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Settings Navigation */}
         <div className="w-full lg:w-64 flex-shrink-0">
@@ -90,21 +162,21 @@ const AdminSettingsPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300">Nama Toko</label>
-                    <input type="text" defaultValue="Flash Rent" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                    <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300">Email Kontak</label>
-                    <input type="email" defaultValue="support@flashrent.com" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                    <input type="email" value={storeEmail} onChange={e => setStoreEmail(e.target.value)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-medium text-slate-300">Deskripsi Singkat (SEO)</label>
-                    <textarea rows={3} defaultValue="Platform sewa lisensi premium dan akun digital terbaik." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
+                    <textarea rows={3} value={storeDescription} onChange={e => setStoreDescription(e.target.value)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
                   </div>
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-white/10 flex justify-end">
-                  <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30">
-                    <Save className="w-4 h-4" />
+                  <button onClick={handleSaveGeneral} disabled={saving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Simpan Perubahan
                   </button>
                 </div>
@@ -125,7 +197,7 @@ const AdminSettingsPage = () => {
                       <Key className="w-4 h-4 text-purple-400" />
                       Secret API Key
                     </label>
-                    <input type="password" defaultValue="sk_test_12345abcdefghijklmnopqrstuvwxyz" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
+                    <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-300">Callback URL (Webhook)</label>
@@ -139,15 +211,15 @@ const AdminSettingsPage = () => {
                       <p className="text-sm text-slate-400">Gunakan data palsu untuk menguji pembayaran tanpa uang sungguhan.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
+                      <input type="checkbox" className="sr-only peer" checked={sandboxMode} onChange={e => setSandboxMode(e.target.checked)} />
                       <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-white/10 flex justify-end">
-                  <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30">
-                    <Save className="w-4 h-4" />
+                  <button onClick={handleSavePayment} disabled={saving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/30">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Simpan Perubahan
                   </button>
                 </div>
@@ -218,6 +290,7 @@ const AdminSettingsPage = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -1,21 +1,6 @@
-import { User, Mail, Phone, Shield, Key, Bell, LogOut, Code } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
+import { User, Mail, Phone, Shield, Key, Bell, LogOut } from 'lucide-react';
 
 const CustomerAccountPage = () => {
-  const { currentUser } = useAuth();
-  
-  const handleMakeAdmin = async () => {
-    if (!currentUser) return;
-    try {
-      await updateDoc(doc(db, 'users', currentUser.uid), { role: 'ADMIN' });
-      alert('Berhasil! Anda sekarang adalah Admin. Silakan refresh halaman dan menu /admin akan terbuka.');
-      window.location.reload();
-    } catch (error) {
-      alert('Gagal menjadikan Admin. Pastikan Firestore rules mengizinkan.');
-    }
-  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -45,13 +30,6 @@ const CustomerAccountPage = () => {
             <button className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold rounded-2xl transition-colors">
               <LogOut className="w-5 h-5" />
               Keluar Akun
-            </button>
-            <button 
-              onClick={handleMakeAdmin}
-              className="mt-4 w-full flex items-center gap-3 px-4 py-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold rounded-2xl transition-colors text-sm"
-            >
-              <Code className="w-4 h-4" />
-              [Dev] Jadikan Saya Admin
             </button>
           </div>
         </div>
