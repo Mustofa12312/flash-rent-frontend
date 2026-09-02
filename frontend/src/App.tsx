@@ -13,6 +13,10 @@ import DashboardPage from './pages/admin/DashboardPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 
+// Security & Error Handling Pages
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFoundPage from './pages/NotFoundPage';
+
 // Dummy wrapper for public pages to keep Navbar
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -29,25 +33,31 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => (
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Admin Routes (No public Navbar) */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="products" element={<AdminProductsPage />} />
-          <Route path="orders" element={<AdminOrdersPage />} />
-          <Route path="*" element={<Navigate to="/admin" replace />} />
-        </Route>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Admin Routes (No public Navbar) */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="orders" element={<AdminOrdersPage />} />
+            {/* Catch missing admin routes */}
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Route>
 
-        {/* Public Routes */}
-        <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
-        <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
-        <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
-        <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
-        <Route path="/payment" element={<PublicLayout><PaymentPage /></PublicLayout>} />
-        <Route path="/success" element={<PublicLayout><SuccessPage /></PublicLayout>} />
-      </Routes>
-    </Router>
+          {/* Public Routes */}
+          <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+          <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
+          <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
+          <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
+          <Route path="/payment" element={<PublicLayout><PaymentPage /></PublicLayout>} />
+          <Route path="/success" element={<PublicLayout><SuccessPage /></PublicLayout>} />
+          
+          {/* 404 Catch All */}
+          <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
