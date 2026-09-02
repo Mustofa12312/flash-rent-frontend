@@ -91,6 +91,7 @@ const AdminProductsPage = () => {
         packages: formData.packages.map((pkg, i) => ({
           id: `pkg-${Date.now()}-${i}`,
           name: pkg.durationUnit === 'Unlimited' ? 'Akses Selamanya' : `Paket ${pkg.durationValue} ${pkg.durationUnit}`,
+          durationType: pkg.durationUnit === 'Unlimited' ? 'UNLIMITED' : 'LIMITED',
           durationUnit: pkg.durationUnit,
           durationValue: Number(pkg.durationValue) || 1,
           price: Number(pkg.price.replace(/\./g, ''))
