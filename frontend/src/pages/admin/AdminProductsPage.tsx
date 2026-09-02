@@ -10,6 +10,7 @@ const AdminProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -65,13 +66,26 @@ const AdminProductsPage = () => {
     }
   };
 
+  const handleEditProduct = (product: any) => {
+    setEditProductId(product.id);
+    setFormData({
+      name: product.name,
+      category: product.category,
+      description: product.description,
+      image: product.image || '',
+      rating: product.rating || 5.0,
+      packages: product.packages || []
+    });
+    setIsAddModalOpen(true);
+  };
+
   const handleSaveProduct = async () => {
     try {
       const newProduct = {
         name: formData.name,
         category: formData.category,
         description: formData.description,
-        image: formData.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500',
+        image: formData.image || '',
         rating: formData.rating,
         features: ['Fitur Premium 1', 'Fitur Premium 2'],
         packages: formData.packages.map((pkg, i) => ({
@@ -83,8 +97,15 @@ const AdminProductsPage = () => {
         }))
       };
       
-      await addDoc(collection(db, 'products'), newProduct);
+      if (editProductId) {
+        const { updateDoc } = await import('firebase/firestore');
+        await updateDoc(doc(db, 'products', editProductId), newProduct);
+      } else {
+        await addDoc(collection(db, 'products'), newProduct);
+      }
+      
       setIsAddModalOpen(false);
+      setEditProductId(null);
       fetchProducts();
       // Reset form
       setFormData({ 
@@ -198,7 +219,14 @@ const AdminProductsPage = () => {
             </button>
           )}
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setEditProductId(null);
+              setFormData({ 
+                name: '', category: '', description: '', image: '', rating: 5.0, 
+                packages: [{ id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }] 
+              });
+              setIsAddModalOpen(true);
+            }}
             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
@@ -256,7 +284,13 @@ const AdminProductsPage = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-white/10 flex-shrink-0">
-                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                          {product.image ? (
+                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                              {product.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div className="font-semibold text-white mb-1">{product.name}</div>
@@ -274,6 +308,11 @@ const AdminProductsPage = () => {
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors" title="Edit" onClick={() => handleEditProduct(product)}>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
                         <button className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Hapus" onClick={() => handleDelete(product.id)}>
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -299,7 +338,7 @@ const AdminProductsPage = () => {
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)}></div>
           <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
             <div className="flex items-center justify-between p-6 border-b border-white/10 bg-slate-800/50">
-              <h2 className="text-xl font-bold text-white">Tambah Produk Baru</h2>
+              <h2 className="text-xl font-bold text-white">{editProductId ? 'Edit Produk' : 'Tambah Produk Baru'}</h2>
               <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-6 h-6" />
               </button>

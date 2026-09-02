@@ -20,7 +20,7 @@ export interface Product {
   name: string;
   description: string;
   category: string;
-  imageUrl?: string;
+  image?: string;
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   updatedAt: string;

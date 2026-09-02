@@ -70,7 +70,11 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-5">
           <div className="sticky top-24">
             <div className="h-64 sm:h-80 w-full bg-slate-900 overflow-hidden rounded-3xl flex items-center justify-center text-center mb-8 shadow-xl relative">
-              <img src={product.image || `https://source.unsplash.com/800x600/?${product.category}`} alt={product.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              {product.image ? (
+                <img src={product.image} alt={product.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              ) : (
+                <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-blue-600 to-indigo-900 opacity-60"></div>
+              )}
               <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight relative z-10 p-4">{product.name}</h1>
             </div>
             

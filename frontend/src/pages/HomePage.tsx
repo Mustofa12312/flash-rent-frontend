@@ -102,17 +102,26 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {latestProducts.map(product => (
-                <Link to={`/product/${product.id}`} key={product.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                  <div className="h-48 overflow-hidden relative bg-slate-100">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-600 uppercase tracking-wider">
-                      {product.category}
+                <Link to={`/product/${product.id}`} key={product.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col h-full">
+                  {product.image ? (
+                    <div className="h-48 overflow-hidden relative bg-slate-100 flex-shrink-0">
+                      <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-600 uppercase tracking-wider">
+                        {product.category}
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-6">
+                  ) : (
+                    <div className="h-48 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center p-6 text-center relative flex-shrink-0">
+                      <h3 className="text-4xl font-bold text-white leading-tight uppercase shadow-sm">{product.name.charAt(0)}</h3>
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-600 uppercase tracking-wider">
+                        {product.category}
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-6 flex flex-col flex-1">
                     <h3 className="text-xl font-bold text-slate-900 mb-2">{product.name}</h3>
-                    <p className="text-slate-500 text-sm mb-4 line-clamp-2">{product.description}</p>
-                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                    <p className="text-slate-500 text-sm mb-4 line-clamp-2 flex-1">{product.description}</p>
+                    <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-auto">
                       <div>
                         <p className="text-xs text-slate-400 font-medium mb-0.5">Mulai dari</p>
                         <p className="font-bold text-slate-900">
