@@ -10,18 +10,30 @@ const AdminSettingsPage = () => {
   const [newCategory, setNewCategory] = useState('');
 
   const handleSaveCategories = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      const updated = [...categories, newCategory.trim()];
-      setCategories(updated);
-      localStorage.setItem('flash_categories', JSON.stringify(updated));
-      setNewCategory('');
+    const newCat = newCategory.trim();
+    if (!newCat) return;
+
+    // Check for duplicates case-insensitively
+    const isDuplicate = categories.some(c => c.toLowerCase() === newCat.toLowerCase());
+    
+    if (isDuplicate) {
+      alert(`Kategori "${newCat}" sudah ada!`);
+      return;
     }
+
+    const updated = [...categories, newCat];
+    setCategories(updated);
+    localStorage.setItem('flash_categories', JSON.stringify(updated));
+    setNewCategory('');
+    alert(`Kategori "${newCat}" berhasil ditambahkan!`);
   };
 
   const handleRemoveCategory = (cat: string) => {
-    const updated = categories.filter(c => c !== cat);
-    setCategories(updated);
-    localStorage.setItem('flash_categories', JSON.stringify(updated));
+    if (confirm(`Apakah Anda yakin ingin menghapus kategori "${cat}"?`)) {
+      const updated = categories.filter(c => c !== cat);
+      setCategories(updated);
+      localStorage.setItem('flash_categories', JSON.stringify(updated));
+    }
   };
 
   const tabs = [
