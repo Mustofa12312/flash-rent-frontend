@@ -10,6 +10,8 @@ import SuccessPage from './pages/SuccessPage';
 // Admin Pages
 import AdminLayout from './components/admin/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
+import AnalyticsPage from './pages/admin/AnalyticsPage';
+import AdminPromoPage from './pages/admin/AdminPromoPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 
@@ -39,6 +41,8 @@ function App() {
           {/* Admin Routes (No public Navbar) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="promos" element={<AdminPromoPage />} />
             <Route path="products" element={<AdminProductsPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             {/* Catch missing admin routes */}

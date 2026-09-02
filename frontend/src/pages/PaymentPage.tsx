@@ -7,6 +7,7 @@ interface LocationState {
   product: Product;
   pkg: Package;
   customerDetails: any;
+  finalPrice?: number;
 }
 
 export default function PaymentPage() {
@@ -80,7 +81,7 @@ export default function PaymentPage() {
           </div>
           <div className="text-right">
             <p className="text-sm text-slate-500 mb-1">Total Tagihan</p>
-            <p className="text-2xl font-bold text-blue-600">{formatIDR(pkg.price)}</p>
+            <p className="text-2xl font-bold text-blue-600">{formatIDR(state.finalPrice ?? pkg.price)}</p>
           </div>
         </div>
 

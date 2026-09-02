@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, Users, Package, DollarSign, ArrowUpRight } from 'lucide-react';
 
 const statCards = [

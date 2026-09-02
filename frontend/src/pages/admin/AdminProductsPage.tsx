@@ -1,6 +1,25 @@
-import React from 'react';
 import { Plus, Search, Edit2, Trash2, MoreVertical, Star } from 'lucide-react';
-import { products } from '../../types';
+
+const mockProducts = [
+  {
+    id: 'prod-1',
+    name: 'Canva Pro',
+    description: 'Akses penuh ke semua fitur premium Canva.',
+    category: 'Design',
+    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=100',
+    rating: 4.8,
+    packages: [{ price: 15000 }]
+  },
+  {
+    id: 'prod-2',
+    name: 'Spotify Premium',
+    description: 'Dengarkan musik tanpa iklan.',
+    category: 'Entertainment',
+    image: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=100',
+    rating: 4.9,
+    packages: [{ price: 35000 }]
+  }
+];
 
 const AdminProductsPage = () => {
   return (
@@ -54,7 +73,7 @@ const AdminProductsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
+              {mockProducts.map((product) => (
                 <tr key={product.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
@@ -108,7 +127,7 @@ const AdminProductsPage = () => {
         
         {/* Pagination */}
         <div className="p-4 border-t border-white/10 flex items-center justify-between text-sm text-slate-400">
-          <div>Menampilkan 1 hingga {products.length} dari {products.length} produk</div>
+          <div>Menampilkan 1 hingga {mockProducts.length} dari {mockProducts.length} produk</div>
           <div className="flex gap-1">
             <button className="px-3 py-1 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50">Prev</button>
             <button className="px-3 py-1 rounded-md bg-blue-600 text-white">1</button>

@@ -108,3 +108,17 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  discountType: 'PERCENTAGE' | 'FIXED';
+  discountValue: number;
+  maxDiscount?: number; // Only for PERCENTAGE
+  minPurchase?: number;
+  quota: number;
+  used: number;
+  expiresAt: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}

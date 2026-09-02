@@ -1,4 +1,3 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -6,12 +5,16 @@ import {
   ShoppingCart, 
   LogOut, 
   Settings,
-  Users
+  Users,
+  BarChart2,
+  Tag
 } from 'lucide-react';
 
 const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+    { name: 'Laporan', icon: BarChart2, path: '/admin/analytics' },
+    { name: 'Promo & Diskon', icon: Tag, path: '/admin/promos' },
     { name: 'Produk', icon: PackageSearch, path: '/admin/products' },
     { name: 'Pesanan', icon: ShoppingCart, path: '/admin/orders' },
     { name: 'Pelanggan', icon: Users, path: '/admin/customers' },

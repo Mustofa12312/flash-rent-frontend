@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Search, Filter } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types';
 // Temporarily using mock data since Firebase is not fully connected
@@ -43,7 +44,7 @@ const MOCK_PRODUCTS: Product[] = [
   }
 ];
 
-export default function ProductsPage() {
+export default function CatalogPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,31 +58,39 @@ export default function ProductsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-10 text-center md:text-left">
-        <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Semua Produk</h1>
-        <p className="text-lg text-slate-600 max-w-2xl">
-          Temukan berbagai layanan digital terbaik. Pilih produk, tentukan paket, dan nikmati akses instan.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Semua Produk</h1>
+          <p className="text-slate-600">Jelajahi berbagai lisensi dan akun premium untuk kebutuhan Anda.</p>
+        </div>
+        
+        <div className="flex gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Cari produk..." 
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+            <Filter className="w-5 h-5" />
+            <span className="hidden sm:inline">Filter</span>
+          </button>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {[1, 2, 3, 4].map(i => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {loading ? (
+          [1, 2, 3, 4].map(i => (
             <div key={i} className="animate-pulse bg-slate-200 rounded-2xl h-80"></div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {products.map(product => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
-              // Mocking a starting price for display purposes
-              startingPrice={15000} 
-            />
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
+        )}
+      </div>
     </div>
   );
 }

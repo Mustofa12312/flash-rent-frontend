@@ -2,8 +2,8 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useForm as useReactHookForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { Product, Package } from '../types';
-import { Shield, CreditCard, ChevronLeft } from 'lucide-react';
+import type { Product, Package, PromoCode } from '../types';
+import { Shield, CreditCard, ChevronLeft, Tag } from 'lucide-react';
 import { useState } from 'react';
 
 // Form validation schema using Zod
@@ -26,6 +26,10 @@ export default function CheckoutPage() {
   const state = location.state as LocationState;
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
+  const [promoError, setPromoError] = useState('');
 
   const {
     register,
@@ -50,6 +54,54 @@ export default function CheckoutPage() {
     }).format(price);
   };
 
+  const handleApplyPromo = () => {
+    setPromoError('');
+    // Mock Promo Logic
+    const code = promoCode.toUpperCase();
+    if (code === 'FLASHSALE20') {
+      if (pkg.price < 100000) {
+        setPromoError('Minimal pembelian Rp 100.000 untuk promo ini');
+        return;
+      }
+      setAppliedPromo({
+        id: 'promo-1', code: 'FLASHSALE20', discountType: 'PERCENTAGE', discountValue: 20, maxDiscount: 50000,
+        minPurchase: 100000, quota: 100, used: 45, expiresAt: '', status: 'ACTIVE', createdAt: ''
+      });
+    } else if (code === 'HEMAT50K') {
+      if (pkg.price < 200000) {
+        setPromoError('Minimal pembelian Rp 200.000 untuk promo ini');
+        return;
+      }
+      setAppliedPromo({
+        id: 'promo-2', code: 'HEMAT50K', discountType: 'FIXED', discountValue: 50000,
+        minPurchase: 200000, quota: 50, used: 50, expiresAt: '', status: 'ACTIVE', createdAt: ''
+      });
+    } else {
+      setPromoError('Kode promo tidak valid atau sudah kedaluwarsa');
+      setAppliedPromo(null);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoCode('');
+    setPromoError('');
+  };
+
+  let discountAmount = 0;
+  if (appliedPromo) {
+    if (appliedPromo.discountType === 'PERCENTAGE') {
+      discountAmount = (pkg.price * appliedPromo.discountValue) / 100;
+      if (appliedPromo.maxDiscount && discountAmount > appliedPromo.maxDiscount) {
+        discountAmount = appliedPromo.maxDiscount;
+      }
+    } else {
+      discountAmount = appliedPromo.discountValue;
+    }
+  }
+  
+  const finalPrice = Math.max(0, pkg.price - discountAmount);
+
   const onSubmit = (data: CheckoutFormInputs) => {
     setIsSubmitting(true);
     // Simulate order creation & QRIS generation
@@ -63,7 +115,9 @@ export default function CheckoutPage() {
         state: { 
           product, 
           pkg,
-          customerDetails: data
+          customerDetails: data,
+          promo: appliedPromo,
+          finalPrice
         }
       });
     }, 1500);
@@ -157,9 +211,59 @@ export default function CheckoutPage() {
               </span>
             </div>
 
-            <div className="border-t border-slate-700 pt-6 mb-8 flex justify-between items-end">
+            {/* Promo Code Input */}
+            <div className="mb-6 border-t border-slate-700 pt-6">
+              <label className="block text-sm text-slate-400 mb-2">Kode Promo (Opsional)</label>
+              {appliedPromo ? (
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-emerald-400" />
+                    <span className="font-medium text-emerald-400 tracking-wider">{appliedPromo.code}</span>
+                  </div>
+                  <button 
+                    onClick={handleRemovePromo}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="Contoh: FLASHSALE20"
+                    className="flex-1 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl focus:outline-none focus:border-blue-500 uppercase"
+                  />
+                  <button 
+                    type="button"
+                    onClick={handleApplyPromo}
+                    disabled={!promoCode.trim()}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+                  >
+                    Terapkan
+                  </button>
+                </div>
+              )}
+              {promoError && <p className="mt-2 text-sm text-red-400">{promoError}</p>}
+            </div>
+
+            <div className="border-t border-slate-700 pt-4 mb-2 flex justify-between items-center text-sm">
+              <span className="text-slate-400">Subtotal</span>
+              <span>{formatIDR(pkg.price)}</span>
+            </div>
+            
+            {appliedPromo && (
+              <div className="mb-2 flex justify-between items-center text-sm text-emerald-400 animate-in fade-in">
+                <span>Diskon Promo</span>
+                <span>-{formatIDR(discountAmount)}</span>
+              </div>
+            )}
+
+            <div className="border-t border-slate-700 pt-4 mb-8 flex justify-between items-end">
               <span className="text-lg">Total Bayar</span>
-              <span className="text-3xl font-bold text-blue-400">{formatIDR(pkg.price)}</span>
+              <span className="text-3xl font-bold text-blue-400">{formatIDR(finalPrice)}</span>
             </div>
 
             <div className="space-y-4 text-sm text-slate-400">
