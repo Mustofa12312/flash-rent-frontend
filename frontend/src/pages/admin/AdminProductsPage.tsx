@@ -1,55 +1,146 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, MoreVertical, Star, X } from 'lucide-react';
-
-const mockProducts = [
-  {
-    id: 'prod-1',
-    name: 'Canva Pro',
-    description: 'Akses penuh ke semua fitur premium Canva.',
-    category: 'Design',
-    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=100',
-    rating: 4.8,
-    packages: [{ price: 15000 }]
-  },
-  {
-    id: 'prod-2',
-    name: 'Spotify Premium',
-    description: 'Dengarkan musik tanpa iklan.',
-    category: 'Entertainment',
-    image: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=100',
-    rating: 4.9,
-    packages: [{ price: 35000 }]
-  }
-];
+import { Plus, Search, Trash2, X, Loader2, Database } from 'lucide-react';
+import { db } from '../../lib/firebase';
+import { collection, query, getDocs, deleteDoc, doc, addDoc } from 'firebase/firestore';
 
 const AdminProductsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [categories, setCategories] = useState<string[]>(['Entertainment', 'Software', 'Design']);
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [loading, setLoading] = useState(true);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    description: '',
+    basePrice: '',
+    image: '',
+    rating: 5.0
+  });
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'products'));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setProducts(data);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchProducts();
     const saved = localStorage.getItem('flash_categories');
     if (saved) {
       setCategories(JSON.parse(saved));
     }
   }, []);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
-      setProducts(prev => prev.filter(p => p.id !== id));
+      try {
+        await deleteDoc(doc(db, 'products', id));
+        fetchProducts();
+      } catch (error) {
+        alert('Gagal menghapus produk.');
+      }
     }
   };
 
-  const filtered = products
-    .filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchCat = selectedCategory === 'all' || p.category.toLowerCase() === selectedCategory;
-      return matchSearch && matchCat;
-    })
-    .sort((a, b) => sortBy === 'popular' ? b.rating - a.rating : 0);
+  const handleSaveProduct = async () => {
+    try {
+      const newProduct = {
+        name: formData.name,
+        category: formData.category,
+        description: formData.description,
+        image: formData.image || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500',
+        rating: formData.rating,
+        features: ['Fitur Premium 1', 'Fitur Premium 2'],
+        packages: [
+          {
+            id: 'pkg-1',
+            name: 'Paket Dasar',
+            durationUnit: 'Bulan',
+            durationValue: 1,
+            price: Number(formData.basePrice)
+          }
+        ]
+      };
+      
+      await addDoc(collection(db, 'products'), newProduct);
+      setIsAddModalOpen(false);
+      fetchProducts();
+      // Reset form
+      setFormData({ name: '', category: '', description: '', basePrice: '', image: '', rating: 5.0 });
+    } catch (error) {
+      alert('Gagal menyimpan produk.');
+    }
+  };
+
+  const handleSeedData = async () => {
+    if (!confirm('Ini akan mengimpor produk contoh (Canva, Spotify, dll). Lanjutkan?')) return;
+    try {
+      const mockProducts = [
+        {
+          name: 'Canva Pro',
+          description: 'Akses penuh ke semua fitur premium Canva.',
+          category: 'Design',
+          image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500',
+          rating: 4.8,
+          features: ['Unlimited Templates', 'Brand Kit', 'Magic Resize'],
+          packages: [{ id: 'pkg-c1', name: '1 Bulan', durationUnit: 'Bulan', durationValue: 1, price: 15000 }]
+        },
+        {
+          name: 'Spotify Premium',
+          description: 'Dengarkan musik tanpa iklan.',
+          category: 'Entertainment',
+          image: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=500',
+          rating: 4.9,
+          features: ['Tanpa Iklan', 'Download Offline', 'Kualitas Suara Tinggi'],
+          packages: [{ id: 'pkg-s1', name: '1 Bulan', durationUnit: 'Bulan', durationValue: 1, price: 35000 }]
+        },
+        {
+          name: 'Netflix Premium',
+          description: 'Streaming film dan series kualitas 4K UHD.',
+          category: 'Entertainment',
+          image: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=500',
+          rating: 4.9,
+          features: ['Resolusi 4K UHD', 'Bisa ditonton di TV', 'Download Offline'],
+          packages: [{ id: 'pkg-n1', name: '1 Bulan 1 Profil', durationUnit: 'Bulan', durationValue: 1, price: 45000 }]
+        },
+        {
+          name: 'Microsoft Office 365',
+          description: 'Lisensi resmi Microsoft Word, Excel, PowerPoint.',
+          category: 'Software',
+          image: 'https://images.unsplash.com/photo-1633419461186-7d40a38b4380?w=500',
+          rating: 4.7,
+          features: ['1 TB OneDrive', 'Aplikasi Premium', 'Bisa di 5 Perangkat'],
+          packages: [{ id: 'pkg-m1', name: '1 Tahun', durationUnit: 'Tahun', durationValue: 1, price: 250000 }]
+        }
+      ];
+
+      for (const prod of mockProducts) {
+        await addDoc(collection(db, 'products'), prod);
+      }
+      alert('Berhasil impor produk contoh!');
+      fetchProducts();
+    } catch (error) {
+      alert('Gagal impor data.');
+    }
+  };
+
+  const filtered = products.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCat = selectedCategory === 'all' || p.category.toLowerCase() === selectedCategory;
+    return matchSearch && matchCat;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -58,13 +149,24 @@ const AdminProductsPage = () => {
           <h1 className="text-3xl font-bold text-white mb-2">Manajemen Produk</h1>
           <p className="text-slate-400">Kelola katalog produk, harga, dan ketersediaan.</p>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Tambah Produk
-        </button>
+        <div className="flex gap-2">
+          {products.length === 0 && (
+            <button 
+              onClick={handleSeedData}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold transition-all flex items-center gap-2"
+            >
+              <Database className="w-5 h-5" />
+              Impor Contoh
+            </button>
+          )}
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Tambah Produk
+          </button>
+        </div>
       </div>
 
       <div className="bg-slate-900/40 border border-white/10 rounded-2xl backdrop-blur-md overflow-hidden">
@@ -91,91 +193,65 @@ const AdminProductsPage = () => {
                 <option key={idx} value={cat.toLowerCase()}>{cat}</option>
               ))}
             </select>
-            <select 
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none cursor-pointer"
-            >
-              <option value="newest">Terbaru</option>
-              <option value="popular">Terpopuler</option>
-            </select>
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-white/[0.02] border-b border-white/5 text-slate-400 text-sm">
-                <th className="py-4 px-6 font-medium">Produk Info</th>
-                <th className="py-4 px-6 font-medium">Kategori</th>
-                <th className="py-4 px-6 font-medium">Harga (Mulai dari)</th>
-                <th className="py-4 px-6 font-medium">Rating</th>
-                <th className="py-4 px-6 font-medium">Stok/Status</th>
-                <th className="py-4 px-6 font-medium text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((product) => (
-                <tr key={product.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-white/10 flex-shrink-0">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white mb-1">{product.name}</div>
-                        <div className="text-xs text-slate-400 max-w-[200px] truncate">{product.description}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-medium text-slate-300">
-                      {product.category}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 font-medium text-blue-400">
-                    Rp {product.packages[0]?.price.toLocaleString('id-ID')}
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-1 text-amber-400">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="text-sm font-medium">{product.rating}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      <span className="text-sm text-emerald-400">Tersedia</span>
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors" title="Edit" onClick={() => alert(`Edit produk: ${product.name}\n(Fitur edit form akan tersedia di fase backend)`)}>
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Hapus" onClick={() => handleDelete(product.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-slate-400 hover:text-white transition-colors" title="Lainnya">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        <div className="overflow-x-auto min-h-[300px]">
+          {loading ? (
+            <div className="flex justify-center items-center h-48">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-white/[0.02] border-b border-white/5 text-slate-400 text-sm">
+                  <th className="py-4 px-6 font-medium">Produk Info</th>
+                  <th className="py-4 px-6 font-medium">Kategori</th>
+                  <th className="py-4 px-6 font-medium">Harga (Mulai dari)</th>
+                  <th className="py-4 px-6 font-medium text-right">Aksi</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination */}
-        <div className="p-4 border-t border-white/10 flex items-center justify-between text-sm text-slate-400">
-          <div className="text-sm">Menampilkan {filtered.length} dari {products.length} produk</div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50">Prev</button>
-            <button className="px-3 py-1 rounded-md bg-blue-600 text-white">1</button>
-            <button className="px-3 py-1 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50">Next</button>
-          </div>
+              </thead>
+              <tbody>
+                {filtered.map((product) => (
+                  <tr key={product.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-white/10 flex-shrink-0">
+                          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-white mb-1">{product.name}</div>
+                          <div className="text-xs text-slate-400 max-w-[200px] truncate">{product.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-medium text-slate-300">
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 font-medium text-blue-400">
+                      Rp {product.packages?.[0]?.price?.toLocaleString('id-ID') || 0}
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors" title="Hapus" onClick={() => handleDelete(product.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          
+          {!loading && filtered.length === 0 && (
+            <div className="text-center py-12 text-slate-500">
+              Belum ada produk. Silakan tambah atau klik "Impor Contoh".
+            </div>
+          )}
         </div>
       </div>
 
@@ -195,11 +271,11 @@ const AdminProductsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Nama Produk</label>
-                  <input type="text" placeholder="Contoh: Netflix Premium" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Contoh: Netflix Premium" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Kategori</label>
-                  <select className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
+                  <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all appearance-none cursor-pointer">
                     <option value="">Pilih Kategori</option>
                     {categories.map((cat, idx) => (
                       <option key={idx} value={cat.toLowerCase()}>{cat}</option>
@@ -208,15 +284,15 @@ const AdminProductsPage = () => {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-slate-300">Deskripsi Produk</label>
-                  <textarea rows={3} placeholder="Deskripsi lengkap..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
+                  <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} placeholder="Deskripsi lengkap..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all"></textarea>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">Harga Dasar (Rp)</label>
-                  <input type="number" placeholder="Contoh: 15000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                  <input type="number" value={formData.basePrice} onChange={e => setFormData({...formData, basePrice: e.target.value})} placeholder="Contoh: 15000" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-300">URL Gambar (Opsional)</label>
-                  <input type="text" placeholder="https://..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
+                  <input type="text" value={formData.image} onChange={e => setFormData({...formData, image: e.target.value})} placeholder="https://..." className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 focus:border-transparent outline-none transition-all" />
                 </div>
               </div>
             </div>
@@ -229,11 +305,9 @@ const AdminProductsPage = () => {
                 Batal
               </button>
               <button 
-                onClick={() => {
-                  alert('Fitur tambah produk berhasil disimulasikan!');
-                  setIsAddModalOpen(false);
-                }}
-                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30"
+                onClick={handleSaveProduct}
+                disabled={!formData.name || !formData.category || !formData.basePrice}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg shadow-blue-500/30 disabled:opacity-50"
               >
                 Simpan Produk
               </button>

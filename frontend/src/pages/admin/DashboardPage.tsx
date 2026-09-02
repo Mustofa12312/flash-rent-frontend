@@ -1,21 +1,91 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Users, Package, DollarSign, ArrowUpRight } from 'lucide-react';
-
-const statCards = [
-  { title: 'Total Pendapatan', value: 'Rp 24.500.000', increase: '+15.3%', icon: DollarSign, color: 'from-emerald-500 to-green-500' },
-  { title: 'Pelanggan Aktif', value: '1,234', increase: '+4.1%', icon: Users, color: 'from-blue-500 to-cyan-500' },
-  { title: 'Total Produk', value: '85', increase: '+2', icon: Package, color: 'from-purple-500 to-indigo-500' },
-  { title: 'Penyewaan Aktif', value: '432', increase: '+12.5%', icon: TrendingUp, color: 'from-orange-500 to-red-500' },
-];
-
-const recentOrders = [
-  { id: 'FR-1001', customer: 'Budi Santoso', product: 'Windows 11 Pro', date: '02 Sep 2026', amount: 'Rp 250.000', status: 'PAID' },
-  { id: 'FR-1002', customer: 'Siti Aminah', product: 'Netflix Premium 1 Bulan', date: '02 Sep 2026', amount: 'Rp 45.000', status: 'PAID' },
-  { id: 'FR-1003', customer: 'Agus Pratama', product: 'Canva Pro 1 Tahun', date: '01 Sep 2026', amount: 'Rp 150.000', status: 'PENDING' },
-  { id: 'FR-1004', customer: 'Rina Wijaya', product: 'Spotify Premium', date: '01 Sep 2026', amount: 'Rp 35.000', status: 'EXPIRED' },
-];
+import { TrendingUp, Users, Package, DollarSign, ArrowUpRight, Loader2 } from 'lucide-react';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, getCountFromServer, getAggregateFromServer, sum, orderBy, limit } from 'firebase/firestore';
 
 const DashboardPage = () => {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    revenue: 0,
+    customers: 0,
+    products: 0,
+    activeRentals: 0
+  });
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // 1. Total Revenue (Sum of finalPrice for PAID orders)
+        const ordersRef = collection(db, 'orders');
+        const paidOrdersQ = query(ordersRef, where('status', '==', 'PAID'));
+        const revenueSnapshot = await getAggregateFromServer(paidOrdersQ, {
+          totalRevenue: sum('finalPrice')
+        });
+
+        // 2. Customers Count
+        const usersRef = collection(db, 'users');
+        const customersQ = query(usersRef, where('role', '==', 'CUSTOMER'));
+        const customersSnapshot = await getCountFromServer(customersQ);
+
+        // 3. Products Count
+        const productsRef = collection(db, 'products');
+        const productsSnapshot = await getCountFromServer(productsRef);
+
+        // 4. Active Rentals Count
+        const rentalsRef = collection(db, 'rentals');
+        const activeRentalsQ = query(rentalsRef, where('status', '==', 'ACTIVE'));
+        const activeRentalsSnapshot = await getCountFromServer(activeRentalsQ);
+
+        // 5. Recent Orders
+        const recentOrdersQ = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
+        const recentOrdersSnap = await getDocs(recentOrdersQ);
+        const ordersData = recentOrdersSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        setStats({
+          revenue: revenueSnapshot.data().totalRevenue || 0,
+          customers: customersSnapshot.data().count,
+          products: productsSnapshot.data().count,
+          activeRentals: activeRentalsSnapshot.data().count
+        });
+        setRecentOrders(ordersData);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const formatIDR = (price: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
+  const statCards = [
+    { title: 'Total Pendapatan', value: formatIDR(stats.revenue), icon: DollarSign, color: 'from-emerald-500 to-green-500' },
+    { title: 'Pelanggan Aktif', value: stats.customers.toLocaleString(), icon: Users, color: 'from-blue-500 to-cyan-500' },
+    { title: 'Total Produk', value: stats.products.toLocaleString(), icon: Package, color: 'from-purple-500 to-indigo-500' },
+    { title: 'Penyewaan Aktif', value: stats.activeRentals.toLocaleString(), icon: TrendingUp, color: 'from-orange-500 to-red-500' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center justify-between">
@@ -38,9 +108,6 @@ const DashboardPage = () => {
               <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
                 <stat.icon className="w-6 h-6 text-white" />
               </div>
-              <span className="text-emerald-400 text-sm font-medium bg-emerald-400/10 px-2.5 py-1 rounded-full flex items-center gap-1">
-                {stat.increase} <TrendingUp className="w-3 h-3" />
-              </span>
             </div>
             
             <div className="relative z-10">
@@ -71,24 +138,38 @@ const DashboardPage = () => {
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map((order) => (
+              {recentOrders.map((order) => {
+                const date = new Intl.DateTimeFormat('id-ID', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit'
+                }).format(new Date(order.createdAt));
+                
+                return (
                 <tr key={order.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                   <td className="py-4 px-4 font-medium text-white">{order.id}</td>
-                  <td className="py-4 px-4 text-slate-300">{order.customer}</td>
-                  <td className="py-4 px-4 text-slate-300">{order.product}</td>
-                  <td className="py-4 px-4 text-slate-400 text-sm">{order.date}</td>
-                  <td className="py-4 px-4 font-medium text-white">{order.amount}</td>
+                  <td className="py-4 px-4 text-slate-300">
+                    <div>{order.customerName}</div>
+                    <div className="text-xs text-slate-500">{order.customerEmail}</div>
+                  </td>
+                  <td className="py-4 px-4 text-slate-300">
+                    <div>{order.productName}</div>
+                    <div className="text-xs text-slate-500">{order.packageName}</div>
+                  </td>
+                  <td className="py-4 px-4 text-slate-400 text-sm">{date}</td>
+                  <td className="py-4 px-4 font-medium text-white">{formatIDR(order.finalPrice)}</td>
                   <td className="py-4 px-4">
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${
                       order.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                       order.status === 'PENDING' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                      order.status === 'VERIFYING' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                       'bg-red-500/10 text-red-400 border border-red-500/20'
                     }`}>
                       {order.status}
                     </span>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

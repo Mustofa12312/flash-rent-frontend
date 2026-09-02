@@ -1,65 +1,34 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
-import type { Product } from '../types';
-
-const MOCK_PRODUCTS: (Product & { startingPrice: number })[] = [
-  {
-    id: 'prod-1',
-    name: 'Canva Pro',
-    description: 'Akses penuh ke semua fitur premium Canva. Ratusan ribu template, elemen grafis, dan alat desain profesional.',
-    category: 'Design',
-    status: 'ACTIVE',
-    startingPrice: 5000,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-2',
-    name: 'Spotify Premium',
-    description: 'Dengarkan musik tanpa iklan, unduh untuk offline, dan nikmati kualitas suara tertinggi.',
-    category: 'Entertainment',
-    status: 'ACTIVE',
-    startingPrice: 15000,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-3',
-    name: 'Netflix Premium',
-    description: 'Streaming film dan series kualitas 4K UHD. Mendukung hingga 4 layar bersamaan.',
-    category: 'Entertainment',
-    status: 'ACTIVE',
-    startingPrice: 25000,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'prod-4',
-    name: 'Microsoft Office 365',
-    description: 'Lisensi resmi Microsoft Word, Excel, PowerPoint, dan 1TB OneDrive Storage.',
-    category: 'Software',
-    status: 'ACTIVE',
-    startingPrice: 35000,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-const ALL_CATEGORIES = ['Semua', ...new Set(MOCK_PRODUCTS.map(p => p.category))];
+import { db } from '../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 export default function CatalogPage() {
-  const [products, setProducts] = useState<(Product & { startingPrice: number })[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(['Semua']);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      setProducts(MOCK_PRODUCTS);
-      setLoading(false);
-    }, 500);
+    const fetchProducts = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'products'));
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        setProducts(data);
+
+        // Derive categories
+        const cats = new Set(data.map(p => p.category));
+        setCategories(['Semua', ...Array.from(cats)]);
+      } catch (error) {
+        console.error("Failed to fetch catalog:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
   }, []);
 
   const filtered = products.filter(p => {
@@ -105,7 +74,7 @@ export default function CatalogPage() {
         <div className="mb-8 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
           <p className="text-sm font-semibold text-slate-500 mb-3">Kategori</p>
           <div className="flex flex-wrap gap-2">
-            {ALL_CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -135,9 +104,10 @@ export default function CatalogPage() {
             <div key={i} className="animate-pulse bg-slate-200 rounded-2xl h-80"></div>
           ))
         ) : (
-          filtered.map((product) => (
-            <ProductCard key={product.id} product={product} startingPrice={product.startingPrice} />
-          ))
+          filtered.map((product) => {
+            const startingPrice = product.packages?.[0]?.price || 0;
+            return <ProductCard key={product.id} product={product} startingPrice={startingPrice} />
+          })
         )}
       </div>
     </div>

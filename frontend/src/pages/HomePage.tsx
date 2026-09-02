@@ -1,7 +1,29 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Zap, Clock, Loader2 } from 'lucide-react';
+import { db } from '../lib/firebase';
+import { collection, query, limit, getDocs } from 'firebase/firestore';
 
 export default function HomePage() {
+  const [latestProducts, setLatestProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const q = query(collection(db, 'products'), limit(3));
+        const snap = await getDocs(q);
+        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLatestProducts(data);
+      } catch (error) {
+        console.error("Failed to fetch latest products", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLatest();
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -56,6 +78,67 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-slate-900 mb-3">Fleksibel</h3>
               <p className="text-slate-600">Pilih paket sesuai kebutuhan. Harian, bulanan, atau unlimited selamanya.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Latest Products Section */}
+      <section className="py-20 bg-slate-50 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-10">
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-2">Produk Terbaru</h2>
+              <p className="text-slate-600">Jelajahi produk yang baru ditambahkan ke katalog kami.</p>
+            </div>
+            <Link to="/catalog" className="hidden sm:flex text-blue-600 font-semibold hover:text-blue-700 items-center gap-1">
+              Lihat Semua <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {latestProducts.map(product => (
+                <Link to={`/product/${product.id}`} key={product.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-lg shadow-slate-200/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                  <div className="h-48 overflow-hidden relative bg-slate-100">
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-blue-600 uppercase tracking-wider">
+                      {product.category}
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">{product.name}</h3>
+                    <p className="text-slate-500 text-sm mb-4 line-clamp-2">{product.description}</p>
+                    <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                      <div>
+                        <p className="text-xs text-slate-400 font-medium mb-0.5">Mulai dari</p>
+                        <p className="font-bold text-slate-900">
+                          Rp {product.packages?.[0]?.price?.toLocaleString('id-ID') || 0}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <ArrowRight className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              
+              {!loading && latestProducts.length === 0 && (
+                <div className="col-span-full py-12 text-center text-slate-500">
+                  Katalog produk masih kosong.
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div className="mt-8 text-center sm:hidden">
+            <Link to="/catalog" className="inline-flex text-blue-600 font-semibold hover:text-blue-700 items-center gap-1">
+              Lihat Semua <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </section>

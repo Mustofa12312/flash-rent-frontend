@@ -46,6 +46,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // 4. Aturan untuk koleksi products (Katalog Barang)
+    match /products/{productId} {
+      // Semua pengunjung (bahkan yang belum login) bisa melihat produk
+      allow read: if true;
+      
+      // HANYA Admin yang boleh menambah/mengubah/menghapus produk
+      allow write: if isAdmin();
+    }
+    
     // Fallback: Tolak semua akses yang tidak secara spesifik diizinkan di atas
     match /{document=**} {
       allow read, write: if false;

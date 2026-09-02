@@ -1,77 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PackageCard from '../components/PackageCard';
-import type { Product, Package } from '../types';
 import { ShieldCheck, Zap } from 'lucide-react';
-
-// Mock Data — All products with their packages
-const PRODUCTS_DB: Record<string, { product: Product; packages: Package[] }> = {
-  'prod-1': {
-    product: {
-      id: 'prod-1', name: 'Canva Pro',
-      description: 'Akses penuh ke semua fitur premium Canva. Ratusan ribu template, elemen grafis, dan alat desain profesional. Tingkatkan produktivitas desain Anda ke level selanjutnya.',
-      category: 'Design', status: 'ACTIVE', createdAt: '', updatedAt: ''
-    },
-    packages: [
-      { id: 'pkg-1a', productId: 'prod-1', name: '7 Hari', description: 'Akses percobaan untuk 1 minggu', price: 5000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-1b', productId: 'prod-1', name: '30 Hari', description: 'Paling populer untuk kebutuhan bulanan', price: 15000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-1c', productId: 'prod-1', name: 'Unlimited', description: 'Akses selamanya tanpa batas waktu', price: 100000, durationType: 'UNLIMITED', durationValue: null, durationUnit: null, status: 'ACTIVE', createdAt: '', updatedAt: '' },
-    ]
-  },
-  'prod-2': {
-    product: {
-      id: 'prod-2', name: 'Spotify Premium',
-      description: 'Dengarkan musik tanpa iklan, unduh untuk offline, dan nikmati kualitas suara tertinggi. Streaming tanpa batas dari jutaan lagu.',
-      category: 'Entertainment', status: 'ACTIVE', createdAt: '', updatedAt: ''
-    },
-    packages: [
-      { id: 'pkg-2a', productId: 'prod-2', name: '7 Hari', description: 'Coba dulu seminggu', price: 8000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-2b', productId: 'prod-2', name: '30 Hari', description: 'Akses bulanan paling hemat', price: 15000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-2c', productId: 'prod-2', name: '1 Tahun', description: 'Hemat lebih banyak dengan paket tahunan', price: 120000, durationType: 'LIMITED', durationValue: 365, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-    ]
-  },
-  'prod-3': {
-    product: {
-      id: 'prod-3', name: 'Netflix Premium',
-      description: 'Streaming film dan series kualitas 4K UHD. Mendukung hingga 4 layar bersamaan. Koleksi ribuan judul original.',
-      category: 'Entertainment', status: 'ACTIVE', createdAt: '', updatedAt: ''
-    },
-    packages: [
-      { id: 'pkg-3a', productId: 'prod-3', name: '7 Hari', description: 'Paket mingguan', price: 15000, durationType: 'LIMITED', durationValue: 7, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-3b', productId: 'prod-3', name: '30 Hari', description: 'Paket bulanan terfavorit', price: 25000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-    ]
-  },
-  'prod-4': {
-    product: {
-      id: 'prod-4', name: 'Microsoft Office 365',
-      description: 'Lisensi resmi Microsoft Word, Excel, PowerPoint, dan 1TB OneDrive Storage. Produktivitas tanpa batas.',
-      category: 'Software', status: 'ACTIVE', createdAt: '', updatedAt: ''
-    },
-    packages: [
-      { id: 'pkg-4a', productId: 'prod-4', name: '30 Hari', description: 'Lisensi 1 bulan', price: 35000, durationType: 'LIMITED', durationValue: 30, durationUnit: 'DAYS', status: 'ACTIVE', createdAt: '', updatedAt: '' },
-      { id: 'pkg-4b', productId: 'prod-4', name: 'Unlimited', description: 'Lisensi selamanya', price: 250000, durationType: 'UNLIMITED', durationValue: null, durationUnit: null, status: 'ACTIVE', createdAt: '', updatedAt: '' },
-    ]
-  },
-};
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const [product, setProduct] = useState<Product | null>(null);
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [product, setProduct] = useState<any | null>(null);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
-      const data = PRODUCTS_DB[id || ''];
-      if (data) {
-        setProduct(data.product);
-        setPackages(data.packages);
+    const fetchProduct = async () => {
+      if (!id) return;
+      try {
+        const docRef = doc(db, 'products', id);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setProduct({ id: docSnap.id, ...data });
+          setPackages(data.packages || []);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch product", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 400);
+    };
+    
+    fetchProduct();
   }, [id]);
 
   const handleCheckout = () => {
@@ -105,8 +69,9 @@ export default function ProductDetailPage() {
         {/* Product Info */}
         <div className="lg:col-span-5">
           <div className="sticky top-24">
-            <div className="h-64 sm:h-80 w-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center p-8 text-center mb-8 shadow-xl">
-              <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">{product.name}</h1>
+            <div className="h-64 sm:h-80 w-full bg-slate-900 overflow-hidden rounded-3xl flex items-center justify-center text-center mb-8 shadow-xl relative">
+              <img src={product.image || `https://source.unsplash.com/800x600/?${product.category}`} alt={product.name} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight relative z-10 p-4">{product.name}</h1>
             </div>
             
             <div className="mb-4 flex items-center space-x-2">
