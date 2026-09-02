@@ -10,6 +10,10 @@ import SuccessPage from './pages/SuccessPage';
 import CustomerRentalsPage from './pages/CustomerRentalsPage';
 import CustomerOrdersPage from './pages/CustomerOrdersPage';
 import CustomerAccountPage from './pages/CustomerAccountPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 
 // Admin Pages
 import AdminLayout from './components/admin/AdminLayout';
@@ -39,38 +43,46 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => (
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <Routes>
-          {/* Admin Routes (No public Navbar) */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<DashboardPage />} />
+      <AuthProvider>
+        <Router>
+          <Routes>
+            {/* Admin Routes (No public Navbar) */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<DashboardPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="promos" element={<AdminPromoPage />} />
             <Route path="products" element={<AdminProductsPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="customers" element={<AdminCustomersPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
-            {/* Catch missing admin routes */}
-            <Route path="*" element={<Navigate to="/admin" replace />} />
-          </Route>
+                {/* Catch missing admin routes */}
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Route>
+            </Route>
 
-          {/* Public Routes */}
-          <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
-          <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
-          <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
-          <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
-          <Route path="/payment/:orderId" element={<PublicLayout><PaymentPage /></PublicLayout>} />
-          <Route path="/success/:orderId" element={<PublicLayout><SuccessPage /></PublicLayout>} />
-          
-          {/* Customer Portal Routes */}
-          <Route path="/rentals" element={<PublicLayout><CustomerRentalsPage /></PublicLayout>} />
-          <Route path="/orders" element={<PublicLayout><CustomerOrdersPage /></PublicLayout>} />
-          <Route path="/account" element={<PublicLayout><CustomerAccountPage /></PublicLayout>} />
+            {/* Public Routes */}
+            <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
+            <Route path="/catalog" element={<PublicLayout><CatalogPage /></PublicLayout>} />
+            <Route path="/product/:id" element={<PublicLayout><ProductDetailPage /></PublicLayout>} />
+            <Route path="/checkout" element={<PublicLayout><CheckoutPage /></PublicLayout>} />
+            <Route path="/payment/:orderId" element={<PublicLayout><PaymentPage /></PublicLayout>} />
+            <Route path="/success/:orderId" element={<PublicLayout><SuccessPage /></PublicLayout>} />
+            <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
+            <Route path="/register" element={<PublicLayout><RegisterPage /></PublicLayout>} />
+            
+            {/* Customer Portal Routes (Protected) */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/rentals" element={<PublicLayout><CustomerRentalsPage /></PublicLayout>} />
+              <Route path="/orders" element={<PublicLayout><CustomerOrdersPage /></PublicLayout>} />
+              <Route path="/account" element={<PublicLayout><CustomerAccountPage /></PublicLayout>} />
+            </Route>
 
-          {/* 404 Catch All */}
-          <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
-        </Routes>
-      </Router>
+            {/* 404 Catch All */}
+            <Route path="*" element={<PublicLayout><NotFoundPage /></PublicLayout>} />
+          </Routes>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

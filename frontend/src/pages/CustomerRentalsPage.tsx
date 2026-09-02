@@ -1,55 +1,47 @@
-import { useState } from 'react';
-import { Key, Link as LinkIcon, Lock, Search, Filter, ShieldAlert, CheckCircle2, Clock, Play } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Key, Link as LinkIcon, Lock, Search, Filter, ShieldAlert, CheckCircle2, Clock, Play, Loader2, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const mockRentals = [
-  {
-    id: 'RNT-20260902-001',
-    productName: 'Canva Pro Premium',
-    package: 'Unlimited',
-    image: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=100',
-    startedAt: '2 Sep 2026',
-    expiresAt: null,
-    status: 'ACTIVE',
-    accessType: 'CREDENTIAL',
-    credentials: {
-      username: 'flashrent_user_991@example.com',
-      password: 'SuperSecretPassword123'
-    }
-  },
-  {
-    id: 'RNT-20260815-042',
-    productName: 'Windows 11 Pro License',
-    package: 'Lifetime',
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=100',
-    startedAt: '15 Aug 2026',
-    expiresAt: null,
-    status: 'ACTIVE',
-    accessType: 'LICENSE_KEY',
-    credentials: {
-      key: 'W11P-XXXX-YYYY-ZZZZ-1234'
-    }
-  },
-  {
-    id: 'RNT-20260701-088',
-    productName: 'Spotify Premium',
-    package: '1 Bulan',
-    image: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=100',
-    startedAt: '1 Jul 2026',
-    expiresAt: '1 Aug 2026',
-    status: 'EXPIRED',
-    accessType: 'ACCOUNT_INVITE',
-    credentials: {
-      url: 'https://spotify.com/invite/xxxxxxx'
-    }
-  }
-];
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const CustomerRentalsPage = () => {
   const [activeTab, setActiveTab] = useState('ACTIVE');
   const [selectedRental, setSelectedRental] = useState<any>(null);
+  const [rentals, setRentals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const filteredRentals = mockRentals.filter(r => activeTab === 'ALL' || r.status === activeTab);
+  useEffect(() => {
+    const fetchRentals = async () => {
+      if (!currentUser) return;
+      try {
+        const q = query(
+          collection(db, 'rentals'), 
+          where('userId', '==', currentUser.uid)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Sort manually if no index created for orderBy
+        data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setRentals(data);
+      } catch (error) {
+        console.error('Error fetching rentals:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRentals();
+  }, [currentUser]);
+
+  const filteredRentals = rentals.filter(r => activeTab === 'ALL' || r.status === activeTab);
+
+  const handleCopy = (text: string, type: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -104,56 +96,72 @@ const CustomerRentalsPage = () => {
         </div>
 
         {/* Rentals Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRentals.map(rental => (
-            <div key={rental.id} className="border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all group bg-slate-50/50">
-              <div className="p-5 flex items-start gap-4">
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-white shadow-sm flex-shrink-0">
-                  <img src={rental.image} alt={rental.productName} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full ${
-                      rental.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {rental.status}
-                    </span>
+        {loading ? (
+          <div className="py-12 flex justify-center items-center">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRentals.map(rental => {
+              // Mock product image & name for now, in real scenario we'd fetch product details or store them in rental doc
+              const productName = rental.productName || 'Produk Flash Rent';
+              const packageDuration = rental.durationUnit ? `${rental.durationValue} ${rental.durationUnit}` : 'Unlimited';
+              
+              const expiresDate = rental.expiresAt 
+                ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(rental.expiresAt))
+                : 'Selamanya';
+
+              return (
+                <div key={rental.id} className="border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all group bg-slate-50/50">
+                  <div className="p-5 flex items-start gap-4">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-200 shadow-sm flex-shrink-0 flex items-center justify-center text-slate-400">
+                      <Key className="w-8 h-8" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full ${
+                          rental.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {rental.status}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-slate-900 truncate" title={productName}>{productName}</h3>
+                      <p className="text-sm text-slate-500">{packageDuration}</p>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-slate-900 truncate" title={rental.productName}>{rental.productName}</h3>
-                  <p className="text-sm text-slate-500">{rental.package}</p>
+
+                  <div className="px-5 py-3 bg-white border-y border-slate-100 flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <Clock className="w-4 h-4" />
+                      <span>{rental.expiresAt ? `Sampai ${expiresDate}` : 'Selamanya'}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 flex gap-2">
+                    <button 
+                      onClick={() => setSelectedRental(rental)}
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Key className="w-4 h-4" />
+                      Lihat Akses
+                    </button>
+                    {rental.status === 'EXPIRED' && (
+                      <button className="px-4 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-sm font-medium transition-colors">
+                        Perpanjang
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              );
+            })}
 
-              <div className="px-5 py-3 bg-white border-y border-slate-100 flex justify-between items-center text-sm">
-                <div className="flex items-center gap-1.5 text-slate-500">
-                  <Clock className="w-4 h-4" />
-                  <span>{rental.expiresAt ? `Sampai ${rental.expiresAt}` : 'Selamanya'}</span>
-                </div>
+            {!loading && filteredRentals.length === 0 && (
+              <div className="col-span-full py-12 text-center text-slate-500">
+                Tidak ada penyewaan dengan status tersebut.
               </div>
-
-              <div className="p-5 flex gap-2">
-                <button 
-                  onClick={() => setSelectedRental(rental)}
-                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <Key className="w-4 h-4" />
-                  Lihat Akses
-                </button>
-                {rental.status === 'EXPIRED' && (
-                  <button className="px-4 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl text-sm font-medium transition-colors">
-                    Perpanjang
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {filteredRentals.length === 0 && (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              Tidak ada penyewaan dengan status tersebut.
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -182,39 +190,61 @@ const CustomerRentalsPage = () => {
                 <div className="space-y-4">
                   
                   {/* Credential Type Display */}
-                  {selectedRental.accessType === 'CREDENTIAL' && (
+                  {selectedRental.accessData?.type === 'ACCOUNT' && (
                     <>
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email / Username</label>
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 font-mono text-sm break-all">
-                          {selectedRental.credentials.username}
+                        <div className="flex gap-2">
+                          <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 font-mono text-sm break-all">
+                            {selectedRental.accessData.username}
+                          </div>
+                          <button onClick={() => handleCopy(selectedRental.accessData.username, 'user')} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 text-slate-600">
+                            {copied === 'user' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Password</label>
-                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 font-mono text-sm break-all">
-                          {selectedRental.credentials.password}
+                        <div className="flex gap-2">
+                          <div className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900 font-mono text-sm break-all">
+                            {selectedRental.accessData.password}
+                          </div>
+                          <button onClick={() => handleCopy(selectedRental.accessData.password, 'pass')} className="p-3 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 text-slate-600">
+                            {copied === 'pass' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
                     </>
                   )}
 
-                  {selectedRental.accessType === 'LICENSE_KEY' && (
+                  {selectedRental.accessData?.type === 'LICENSE' && (
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">License Key</label>
-                      <div className="p-4 bg-slate-900 text-green-400 rounded-xl font-medium font-mono text-center tracking-widest text-lg break-all shadow-inner">
-                        {selectedRental.credentials.key}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 p-4 bg-slate-900 text-green-400 rounded-xl font-medium font-mono text-center tracking-widest text-lg break-all shadow-inner">
+                          {selectedRental.accessData.licenseKey}
+                        </div>
+                        <button onClick={() => handleCopy(selectedRental.accessData.licenseKey, 'key')} className="p-4 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200 text-slate-600">
+                          {copied === 'key' ? <Check className="w-5 h-5 text-emerald-600" /> : <Copy className="w-5 h-5" />}
+                        </button>
                       </div>
                     </div>
                   )}
 
-                  {selectedRental.accessType === 'ACCOUNT_INVITE' && (
+                  {selectedRental.accessData?.type === 'INVITE_LINK' && (
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">URL Undangan</label>
-                      <a href={selectedRental.credentials.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl text-blue-700 font-medium transition-colors group">
-                        <span className="truncate mr-4">{selectedRental.credentials.url}</span>
+                      <a href={selectedRental.accessData.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl text-blue-700 font-medium transition-colors group">
+                        <span className="truncate mr-4">{selectedRental.accessData.url}</span>
                         <LinkIcon className="w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform" />
                       </a>
+                    </div>
+                  )}
+
+                  {selectedRental.accessData?.instructions && (
+                    <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600">
+                      <p className="font-semibold text-slate-700 mb-1">Instruksi:</p>
+                      <p>{selectedRental.accessData.instructions}</p>
                     </div>
                   )}
 

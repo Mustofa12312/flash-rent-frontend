@@ -3,10 +3,11 @@ import { useForm as useReactHookForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Product, Package, PromoCode } from '../types';
-import { Shield, CreditCard, ChevronLeft, Tag } from 'lucide-react';
-import { useState } from 'react';
+import { Shield, CreditCard, ChevronLeft, Tag, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 // Form validation schema using Zod
 const checkoutSchema = z.object({
@@ -29,6 +30,7 @@ export default function CheckoutPage() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const { currentUser } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [promoError, setPromoError] = useState('');
@@ -36,10 +38,18 @@ export default function CheckoutPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useReactHookForm<CheckoutFormInputs>({
     resolver: zodResolver(checkoutSchema),
   });
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.displayName) setValue('name', currentUser.displayName);
+      if (currentUser.email) setValue('email', currentUser.email);
+    }
+  }, [currentUser, setValue]);
 
   // Redirect if accessed directly without product/package state
   if (!state || !state.product || !state.pkg) {
@@ -157,9 +167,26 @@ export default function CheckoutPage() {
         <div className="lg:col-span-7">
           <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Informasi Pemesan</h2>
-            <p className="text-slate-500 text-sm mb-8">Masukkan data diri Anda. Akses produk akan dikirimkan melalui Email dan WhatsApp yang terdaftar.</p>
+            
+            {!currentUser ? (
+              <div className="text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
+                <div className="w-16 h-16 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Wajib Login</h3>
+                <p className="text-slate-500 mb-6 px-4">Anda harus masuk ke akun Anda agar pesanan dan lisensi tersimpan dengan aman di Dashboard Anda.</p>
+                <button 
+                  onClick={() => navigate('/login', { state: { from: location } })}
+                  className="bg-blue-600 text-white font-semibold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors"
+                >
+                  Login Sekarang
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-slate-500 text-sm mb-8">Masukkan data diri Anda. Akses produk akan dikirimkan melalui Email dan WhatsApp yang terdaftar.</p>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Nama Lengkap</label>
                 <input
@@ -203,6 +230,8 @@ export default function CheckoutPage() {
                 </button>
               </div>
             </form>
+            </>
+            )}
           </div>
         </div>
 
