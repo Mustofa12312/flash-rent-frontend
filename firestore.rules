@@ -37,11 +37,8 @@ service cloud.firestore {
       // User bisa melihat pesanannya sendiri. Admin bisa melihat semua pesanan.
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       
-      // User HANYA boleh membuat pesanan dengan status 'PENDING'.
-      // Admin boleh melakukan operasi create/update/delete apapun.
-      allow create: if isAuthenticated() && (
-        isAdmin() || (request.resource.data.userId == request.auth.uid && request.resource.data.status == 'PENDING')
-      );
+      // HANYA Admin yang boleh membuat pesanan (Customer membuat pesanan via Cloud Functions backend).
+      allow create: if isAdmin();
       
       // Customer hanya boleh mengubah status ke 'VERIFYING' (konfirmasi bayar).
       // Tidak boleh mengubah field lain. Hanya Admin yang bisa mengubah field lainnya.
