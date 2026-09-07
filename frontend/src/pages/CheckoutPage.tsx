@@ -5,8 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Product, Package, PromoCode } from '../types';
 import { Shield, CreditCard, ChevronLeft, Tag, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db, functions } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { useAuth } from '../contexts/AuthContext';
 
 // Form validation schema using Zod
@@ -66,31 +67,30 @@ export default function CheckoutPage() {
     }).format(price);
   };
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     setPromoError('');
-    // Mock Promo Logic
-    const code = promoCode.toUpperCase();
-    if (code === 'FLASHSALE20') {
-      if (pkg.price < 100000) {
-        setPromoError('Minimal pembelian Rp 100.000 untuk promo ini');
+    if (!promoCode.trim()) return;
+    
+    try {
+      const q = query(collection(db, 'promos'), where('code', '==', promoCode.toUpperCase()), where('status', '==', 'ACTIVE'));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) {
+        setPromoError('Kode promo tidak valid atau sudah kedaluwarsa');
+        setAppliedPromo(null);
         return;
       }
-      setAppliedPromo({
-        id: 'promo-1', code: 'FLASHSALE20', discountType: 'PERCENTAGE', discountValue: 20, maxDiscount: 50000,
-        minPurchase: 100000, quota: 100, used: 45, expiresAt: '', status: 'ACTIVE', createdAt: ''
-      });
-    } else if (code === 'HEMAT50K') {
-      if (pkg.price < 200000) {
-        setPromoError('Minimal pembelian Rp 200.000 untuk promo ini');
+      
+      const promoData = { id: snap.docs[0].id, ...snap.docs[0].data() } as PromoCode;
+      
+      if (pkg.price < promoData.minPurchase) {
+        setPromoError(`Minimal pembelian ${formatIDR(promoData.minPurchase)} untuk promo ini`);
         return;
       }
-      setAppliedPromo({
-        id: 'promo-2', code: 'HEMAT50K', discountType: 'FIXED', discountValue: 50000,
-        minPurchase: 200000, quota: 50, used: 50, expiresAt: '', status: 'ACTIVE', createdAt: ''
-      });
-    } else {
-      setPromoError('Kode promo tidak valid atau sudah kedaluwarsa');
-      setAppliedPromo(null);
+      
+      setAppliedPromo(promoData);
+    } catch (error) {
+      setPromoError('Gagal memverifikasi promo');
     }
   };
 
@@ -117,45 +117,29 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormInputs) => {
     setIsSubmitting(true);
     try {
-      // 1. Generate unique 3-digit code
-      const uniqueCode = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
-      const amount = finalPrice + uniqueCode;
-
-      // 2. Create Order in DB
-      const orderId = `FR-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
-      
-      const payload = {
-        id: orderId,
-        userId: currentUser?.uid || 'GUEST',
-        customerName: data.name,
-        customerEmail: data.email,
-        customerWhatsapp: data.whatsapp,
+      const createOrder = httpsCallable(functions, 'createOrder');
+      const response = await createOrder({
         productId: product.id,
         packageId: pkg.id,
-        productName: product.name,
-        productCategory: product.category,
-        packageName: pkg.name,
-        packageDurationType: pkg.durationType || ((pkg.durationUnit as string) === 'Unlimited' ? 'UNLIMITED' : 'LIMITED'),
-        packageDurationValue: pkg.durationValue ?? null,
-        packageDurationUnit: pkg.durationUnit || null,
-        amount: amount,
-        status: 'PENDING',
         promoCode: appliedPromo?.code || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      await setDoc(doc(db, 'orders', orderId), payload);
+        customer: {
+          name: data.name,
+          email: data.email,
+          whatsapp: data.whatsapp
+        }
+      });
       
-      navigate(`/payment/${orderId}`, { 
+      const result = response.data as any;
+
+      navigate(`/payment/${result.orderId}`, { 
         state: { 
           product, 
           pkg,
           customerDetails: data,
           promo: appliedPromo,
-          finalPrice: amount,
-          qrisUrl: '/images/qris-pribadi.png', // QRIS Statis kita
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+          finalPrice: result.amount,
+          qrisUrl: result.qrisUrl,
+          expiresAt: result.expiresAt
         }
       });
     } catch (error: any) {
