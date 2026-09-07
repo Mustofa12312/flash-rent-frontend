@@ -83,7 +83,7 @@ export default function CheckoutPage() {
       
       const promoData = { id: snap.docs[0].id, ...snap.docs[0].data() } as PromoCode;
       
-      if (pkg.price < promoData.minPurchase) {
+      if (promoData.minPurchase && pkg.price < promoData.minPurchase) {
         setPromoError(`Minimal pembelian ${formatIDR(promoData.minPurchase)} untuk promo ini`);
         return;
       }
