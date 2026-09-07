@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
 
@@ -11,16 +11,38 @@ export default function LoginPage() {
   
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Read the `from` location state so we can redirect back after login
+  const fromState = (location.state as any)?.from;
+  const redirectTo = fromState?.pathname ?? '/rentals';
+  const redirectState = fromState?.state ?? undefined;
+
+  // Helper: navigate back to intended page after login
+  const goToDestination = () => {
+    const savedPath = sessionStorage.getItem('login_redirect_path');
+    const savedState = sessionStorage.getItem('login_redirect_state');
+    sessionStorage.removeItem('login_redirect_path');
+    sessionStorage.removeItem('login_redirect_state');
+    const path = savedPath || redirectTo;
+    const state = savedState ? JSON.parse(savedState) : redirectState;
+    navigate(path, { state, replace: true });
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    // Save destination before login (in case of popup)
+    sessionStorage.setItem('login_redirect_path', redirectTo);
+    if (redirectState) sessionStorage.setItem('login_redirect_state', JSON.stringify(redirectState));
     try {
       await loginWithEmail(email, password);
-      navigate('/rentals');
+      goToDestination();
     } catch (err: any) {
       console.error(err);
+      sessionStorage.removeItem('login_redirect_path');
+      sessionStorage.removeItem('login_redirect_state');
       setError('Email atau password salah.');
     } finally {
       setLoading(false);
@@ -30,11 +52,16 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
+    // Save destination before Google popup (state gets lost otherwise)
+    sessionStorage.setItem('login_redirect_path', redirectTo);
+    if (redirectState) sessionStorage.setItem('login_redirect_state', JSON.stringify(redirectState));
     try {
       await loginWithGoogle();
-      navigate('/rentals');
+      goToDestination();
     } catch (err: any) {
       console.error(err);
+      sessionStorage.removeItem('login_redirect_path');
+      sessionStorage.removeItem('login_redirect_state');
       setError('Gagal login dengan Google.');
     } finally {
       setLoading(false);

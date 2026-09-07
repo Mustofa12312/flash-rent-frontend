@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import type { Product, Package } from '../types';
-import { QrCode, AlertCircle, ShieldCheck, MessageCircle } from 'lucide-react';
+import { QrCode, AlertCircle, ShieldCheck, Download } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { QRCodeSVG } from 'qrcode.react';
@@ -31,18 +31,59 @@ export default function PaymentPage() {
   const [qrisString, setQrisString] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
   const [paymentStatus, setPaymentStatus] = useState<'PENDING' | 'VERIFYING' | 'PAID' | 'EXPIRED'>('PENDING');
-  const [adminWA, setAdminWA] = useState('6281234567890');
+  const qrContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Load admin WhatsApp from settings
-    import('firebase/firestore').then(({ getDoc, doc: fsDoc }) => {
-      getDoc(fsDoc(db, 'settings', 'app')).then(snap => {
-        if (snap.exists() && snap.data().adminWhatsapp) {
-          setAdminWA(snap.data().adminWhatsapp);
-        }
-      }).catch(() => {});
-    });
-  }, []);
+  const handleDownloadQRIS = () => {
+    const svgEl = qrContainerRef.current?.querySelector('svg');
+    if (!svgEl) return;
+
+    const padding = 32;
+    const labelHeight = 60;
+    const svgSize = 240;
+    const totalWidth = svgSize + padding * 2;
+    const totalHeight = svgSize + padding * 2 + labelHeight;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = totalWidth;
+    canvas.height = totalHeight;
+    const ctx = canvas.getContext('2d')!;
+
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+    // Draw QR SVG via image
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, padding, padding, svgSize, svgSize);
+      URL.revokeObjectURL(url);
+
+      // Label area background
+      ctx.fillStyle = '#eff6ff';
+      ctx.fillRect(0, svgSize + padding * 2, totalWidth, labelHeight);
+
+      // "Scan QRIS Atas Nama:" text
+      ctx.fillStyle = '#475569';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Scan QRIS Atas Nama:', totalWidth / 2, svgSize + padding * 2 + 22);
+
+      // "FLASH RENT" bold text
+      ctx.fillStyle = '#1d4ed8';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('FLASH RENT', totalWidth / 2, svgSize + padding * 2 + 48);
+
+      // Download
+      const link = document.createElement('a');
+      link.download = `QRIS-FlashRent-${orderId}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+    img.src = url;
+  };
 
   useEffect(() => {
     if (!orderId) return;
@@ -167,17 +208,7 @@ export default function PaymentPage() {
               <ShieldCheck className="w-10 h-10" />
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">Menunggu Verifikasi Admin</h2>
-            <p className="text-slate-500 mb-6">Jangan tutup halaman ini. Kami sedang memverifikasi mutasi pembayaran Anda.</p>
-            
-            <a 
-              href={`https://wa.me/${adminWA}?text=${encodeURIComponent(`Halo Admin, saya ingin konfirmasi pembayaran Order ${orderId}`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-full transition-colors shadow-lg shadow-emerald-500/30"
-            >
-              <MessageCircle className="w-5 h-5" />
-              Chat Admin
-            </a>
+            <p className="text-slate-500 mb-6">Pesanan Anda sedang dalam proses verifikasi. Admin kami akan segera mengkonfirmasi pembayaran Anda.</p>
           </div>
         ) : paymentStatus === 'PAID' ? (
           <div className="text-center py-10">
@@ -189,8 +220,8 @@ export default function PaymentPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 relative">
-              <div className="w-64 h-64 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center overflow-hidden p-2 mb-4">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 relative">
+              <div ref={qrContainerRef} className="w-64 h-64 bg-slate-50 rounded-xl border border-slate-200 flex flex-col items-center justify-center overflow-hidden p-2 mb-4">
                 {qrisString ? (
                   <QRCodeSVG value={qrisString} size={240} className="w-full h-full" />
                 ) : (
@@ -205,6 +236,16 @@ export default function PaymentPage() {
                 <p className="font-bold text-blue-700">FLASH RENT</p>
               </div>
             </div>
+
+            {qrisString && (
+              <button
+                onClick={handleDownloadQRIS}
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-full px-4 py-1.5 mb-4 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Unduh QRIS
+              </button>
+            )}
 
             <p className="text-slate-600 mb-2 flex items-center gap-2">
               <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>

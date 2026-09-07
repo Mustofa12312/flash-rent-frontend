@@ -65,10 +65,10 @@ const AnalyticsPage = () => {
           const d = new Date(o.createdAt);
           const monthName = monthNames[d.getMonth()];
           if (revMap[monthName]) {
-            revMap[monthName].revenue += o.finalPrice || 0;
+            revMap[monthName].revenue += o.amount || 0;
             revMap[monthName].orders += 1;
           }
-          totalRevenue += o.finalPrice || 0;
+          totalRevenue += o.amount || 0;
         });
 
         const formattedRevData = Object.keys(revMap).map(key => ({

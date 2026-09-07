@@ -43,8 +43,17 @@ service cloud.firestore {
         isAdmin() || (request.resource.data.userId == request.auth.uid && request.resource.data.status == 'PENDING')
       );
       
-      // Hanya Admin yang boleh mengubah pesanan yang sudah ada (Misal ubah jadi PAID).
-      allow update, delete: if isAdmin();
+      // Customer hanya boleh mengubah status ke 'VERIFYING' (konfirmasi bayar).
+      // Tidak boleh mengubah field lain. Hanya Admin yang bisa mengubah field lainnya.
+      allow update: if isAdmin() ||
+        (
+          isAuthenticated() &&
+          resource.data.userId == request.auth.uid &&
+          request.resource.data.status == 'VERIFYING' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        );
+      
+      allow delete: if isAdmin();
     }
 
     // 3. Aturan untuk koleksi rentals (Barang digital / Lisensi)

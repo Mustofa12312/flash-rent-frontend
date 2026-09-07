@@ -16,48 +16,69 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      const ordersRef = collection(db, 'orders');
+      
+      let revenue = 0;
+      let customers = 0;
+      let products = 0;
+      let activeRentals = 0;
+      let ordersData: any[] = [];
+
+      // 1. Total Revenue (Sum of amount for PAID orders)
       try {
-        // 1. Total Revenue (Sum of finalPrice for PAID orders)
-        const ordersRef = collection(db, 'orders');
         const paidOrdersQ = query(ordersRef, where('status', '==', 'PAID'));
         const revenueSnapshot = await getAggregateFromServer(paidOrdersQ, {
-          totalRevenue: sum('finalPrice')
+          totalRevenue: sum('amount')
         });
+        revenue = revenueSnapshot.data().totalRevenue || 0;
+      } catch (error) {
+        console.error("Failed to load revenue:", error);
+      }
 
-        // 2. Customers Count
+      // 2. Customers Count
+      try {
         const usersRef = collection(db, 'users');
         const customersQ = query(usersRef, where('role', '==', 'CUSTOMER'));
         const customersSnapshot = await getCountFromServer(customersQ);
+        customers = customersSnapshot.data().count;
+      } catch (error) {
+        console.error("Failed to load customers count:", error);
+      }
 
-        // 3. Products Count
+      // 3. Products Count
+      try {
         const productsRef = collection(db, 'products');
         const productsSnapshot = await getCountFromServer(productsRef);
+        products = productsSnapshot.data().count;
+      } catch (error) {
+        console.error("Failed to load products count:", error);
+      }
 
-        // 4. Active Rentals Count
+      // 4. Active Rentals Count
+      try {
         const rentalsRef = collection(db, 'rentals');
         const activeRentalsQ = query(rentalsRef, where('status', '==', 'ACTIVE'));
         const activeRentalsSnapshot = await getCountFromServer(activeRentalsQ);
+        activeRentals = activeRentalsSnapshot.data().count;
+      } catch (error) {
+        console.error("Failed to load active rentals count:", error);
+      }
 
-        // 5. Recent Orders
+      // 5. Recent Orders
+      try {
         const recentOrdersQ = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
         const recentOrdersSnap = await getDocs(recentOrdersQ);
-        const ordersData = recentOrdersSnap.docs.map(doc => ({
+        ordersData = recentOrdersSnap.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-
-        setStats({
-          revenue: revenueSnapshot.data().totalRevenue || 0,
-          customers: customersSnapshot.data().count,
-          products: productsSnapshot.data().count,
-          activeRentals: activeRentalsSnapshot.data().count
-        });
-        setRecentOrders(ordersData);
       } catch (error) {
-        console.error("Failed to load dashboard data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Failed to load recent orders:", error);
       }
+
+      setStats({ revenue, customers, products, activeRentals });
+      setRecentOrders(ordersData);
+      setLoading(false);
     };
 
     fetchDashboardData();
@@ -156,7 +177,7 @@ const DashboardPage = () => {
                     <div className="text-xs text-slate-500">{order.packageName}</div>
                   </td>
                   <td className="py-4 px-4 text-slate-400 text-sm">{date}</td>
-                  <td className="py-4 px-4 font-medium text-white">{formatIDR(order.finalPrice)}</td>
+                  <td className="py-4 px-4 font-medium text-white">{formatIDR(order.amount)}</td>
                   <td className="py-4 px-4">
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${
                       order.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
