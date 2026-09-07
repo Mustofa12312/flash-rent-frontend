@@ -7,15 +7,14 @@ import * as crypto from 'crypto';
 export const createOrder = functions.https.onCall(async (request) => {
   try {
     const data = request.data;
-    const { productId, packageId, customer } = data;
+    const { productId, packageId, customer, promoCode } = data;
 
     if (!productId || !packageId || !customer || !customer.name || !customer.email || !customer.whatsapp) {
       throw new functions.https.HttpsError('invalid-argument', 'Missing required fields: productId, packageId, customer(name, email, whatsapp)');
     }
 
     // 1. Fetch Product and Package from DB to ensure prices are secure
-    // In our simplified mock schema, we might store packages in a 'packages' collection or embedded
-    // Assuming a sub-collection: products/{productId}/packages/{packageId}
+    // In our schema, packages is an array inside the product document
     const productRef = db.collection('products').doc(productId);
     const productSnap = await productRef.get();
     
@@ -23,21 +22,44 @@ export const createOrder = functions.https.onCall(async (request) => {
       throw new functions.https.HttpsError('not-found', 'Product not found');
     }
     const productData = productSnap.data()!;
+    const packages = productData.packages || [];
+    const packageData = packages.find((p: any) => p.id === packageId);
 
-    // For simplicity in this v1.0, let's assume we fetch the package details
-    // If the DB is not fully populated yet, we'll gracefully fallback or throw error.
-    const packageRef = productRef.collection('packages').doc(packageId);
-    const packageSnap = await packageRef.get();
-    
-    if (!packageSnap.exists) {
-      // In a real production, throw error. For our transition, allow fallback if testing
+    if (!packageData) {
       throw new functions.https.HttpsError('not-found', 'Package not found');
     }
-    const packageData = packageSnap.data()!;
+
+    // 2. Validate Promo if exists
+    let discountAmount = 0;
+    let appliedPromo: any = null;
+
+    if (promoCode) {
+      const promosRef = db.collection('promos');
+      const promoQuery = await promosRef.where('code', '==', promoCode.toUpperCase()).where('status', '==', 'ACTIVE').limit(1).get();
+      
+      if (!promoQuery.empty) {
+        const promoData = promoQuery.docs[0].data();
+        
+        // Validate minimum purchase
+        if (packageData.price >= promoData.minPurchase) {
+          appliedPromo = promoData;
+          if (promoData.discountType === 'PERCENTAGE') {
+            discountAmount = (packageData.price * promoData.discountValue) / 100;
+            if (promoData.maxDiscount && discountAmount > promoData.maxDiscount) {
+              discountAmount = promoData.maxDiscount;
+            }
+          } else {
+            discountAmount = promoData.discountValue;
+          }
+        }
+      }
+    }
+
+    const finalPrice = Math.max(0, packageData.price - discountAmount);
     
     // Generate unique 3-digit code for manual static QRIS verification
     const uniqueCode = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
-    const amount = packageData.price + uniqueCode;
+    const amount = finalPrice + uniqueCode;
 
     // 2. Create Order in DB
     const orderId = `FR-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
@@ -58,10 +80,11 @@ export const createOrder = functions.https.onCall(async (request) => {
       productName: productData.name,
       productCategory: productData.category,
       packageName: packageData.name,
-      packageDurationType: packageData.durationType,
-      packageDurationValue: packageData.durationValue,
-      packageDurationUnit: packageData.durationUnit,
+      packageDurationType: packageData.durationType || ((packageData.durationUnit as string) === 'Unlimited' ? 'UNLIMITED' : 'LIMITED'),
+      packageDurationValue: packageData.durationValue || null,
+      packageDurationUnit: packageData.durationUnit || null,
       amount: amount,
+      promoCode: appliedPromo ? appliedPromo.code : null,
       status: 'PENDING',
       paymentId: paymentResponse.transactionId,
       expiresAt: paymentResponse.expiresAt,
