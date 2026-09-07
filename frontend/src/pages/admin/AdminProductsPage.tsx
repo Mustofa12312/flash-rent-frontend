@@ -187,9 +187,10 @@ const AdminProductsPage = () => {
   };
 
   const handleAddPackage = () => {
+    const defaultUnit = durationUnits.length > 0 ? durationUnits[0] : 'Bulan';
     setFormData({
       ...formData,
-      packages: [...formData.packages, { id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }]
+      packages: [...formData.packages, { id: Date.now().toString(), durationValue: '1', durationUnit: defaultUnit, price: '' }]
     });
   };
 
@@ -238,9 +239,10 @@ const AdminProductsPage = () => {
           <button 
             onClick={() => {
               setEditProductId(null);
+              const defaultUnit = durationUnits.length > 0 ? durationUnits[0] : 'Bulan';
               setFormData({ 
                 name: '', category: '', description: '', image: '', rating: 5.0, 
-                packages: [{ id: Date.now().toString(), durationValue: '1', durationUnit: 'Bulan', price: '' }] 
+                packages: [{ id: Date.now().toString(), durationValue: '1', durationUnit: defaultUnit, price: '' }] 
               });
               setIsAddModalOpen(true);
             }}

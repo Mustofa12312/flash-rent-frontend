@@ -82,9 +82,12 @@ const AdminOrdersPage = () => {
         if (orderData.packageDurationType !== 'UNLIMITED') {
           const now = new Date();
           const value = orderData.packageDurationValue || 30;
-          if (orderData.packageDurationUnit === 'Hari') now.setDate(now.getDate() + value);
-          else if (orderData.packageDurationUnit === 'Bulan') now.setMonth(now.getMonth() + value);
-          else if (orderData.packageDurationUnit === 'Tahun') now.setFullYear(now.getFullYear() + value);
+          if (orderData.packageDurationUnit === 'Jam' || orderData.packageDurationUnit?.toLowerCase() === 'hours') now.setHours(now.getHours() + value);
+          else if (orderData.packageDurationUnit === 'Hari' || orderData.packageDurationUnit?.toLowerCase() === 'days') now.setDate(now.getDate() + value);
+          else if (orderData.packageDurationUnit === 'Minggu' || orderData.packageDurationUnit?.toLowerCase() === 'weeks') now.setDate(now.getDate() + (value * 7));
+          else if (orderData.packageDurationUnit === 'Bulan' || orderData.packageDurationUnit?.toLowerCase() === 'months') now.setMonth(now.getMonth() + value);
+          else if (orderData.packageDurationUnit === 'Tahun' || orderData.packageDurationUnit?.toLowerCase() === 'years') now.setFullYear(now.getFullYear() + value);
+          else now.setDate(now.getDate() + value); // Fallback assumption is days
           expiresAt = now.toISOString();
         }
 
