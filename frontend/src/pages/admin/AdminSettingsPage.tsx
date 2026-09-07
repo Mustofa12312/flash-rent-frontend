@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings, Tags, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Save, Store, CreditCard, Bell, ShieldCheck, Database, Key, Settings, Tags, Plus, Trash2, Loader2, Clock } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -11,6 +11,9 @@ const AdminSettingsPage = () => {
   // Settings State
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
+  
+  const [durationUnits, setDurationUnits] = useState<string[]>([]);
+  const [newDurationUnit, setNewDurationUnit] = useState('');
   
   const [storeName, setStoreName] = useState('Flash Rent');
   const [storeEmail, setStoreEmail] = useState('support@flashrent.com');
@@ -28,6 +31,8 @@ const AdminSettingsPage = () => {
         if (snap.exists()) {
           const data = snap.data();
           if (data.categories) setCategories(data.categories);
+          if (data.durationUnits) setDurationUnits(data.durationUnits);
+          else setDurationUnits(['Hari', 'Bulan', 'Tahun', 'Unlimited']);
           if (data.storeName) setStoreName(data.storeName);
           if (data.storeEmail) setStoreEmail(data.storeEmail);
           if (data.storeDescription) setStoreDescription(data.storeDescription);
@@ -37,6 +42,7 @@ const AdminSettingsPage = () => {
         } else {
           // If no settings exist yet, set defaults
           setCategories(['Entertainment', 'Software', 'Design']);
+          setDurationUnits(['Hari', 'Bulan', 'Tahun', 'Unlimited']);
         }
       } catch (error) {
         console.error("Failed to fetch settings", error);
@@ -105,9 +111,46 @@ const AdminSettingsPage = () => {
     }
   };
 
+  const handleSaveDurationUnit = async () => {
+    const newUnit = newDurationUnit.trim();
+    if (!newUnit) return;
+
+    const isDuplicate = durationUnits.some(c => c.toLowerCase() === newUnit.toLowerCase());
+    if (isDuplicate) {
+      alert(`Unit durasi "${newUnit}" sudah ada!`);
+      return;
+    }
+
+    const updated = [...durationUnits, newUnit];
+    setDurationUnits(updated);
+    setNewDurationUnit('');
+    
+    // Save to firestore
+    try {
+      await setDoc(doc(db, 'settings', 'app'), { durationUnits: updated }, { merge: true });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleRemoveDurationUnit = async (unit: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus unit durasi "${unit}"?`)) {
+      const updated = durationUnits.filter(c => c !== unit);
+      setDurationUnits(updated);
+      
+      // Save to firestore
+      try {
+        await setDoc(doc(db, 'settings', 'app'), { durationUnits: updated }, { merge: true });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  };
+
   const tabs = [
     { id: 'general', label: 'Profil Toko', icon: Store },
     { id: 'kategori', label: 'Kategori Produk', icon: Tags },
+    { id: 'durasi', label: 'Unit Durasi', icon: Clock },
     { id: 'payment', label: 'Payment Gateway', icon: CreditCard },
     { id: 'notifications', label: 'Notifikasi', icon: Bell },
     { id: 'security', label: 'Keamanan', icon: ShieldCheck },
