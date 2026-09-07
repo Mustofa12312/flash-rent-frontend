@@ -6,6 +6,7 @@ import { collection, query, getDocs, getDoc, deleteDoc, doc, addDoc } from 'fire
 const AdminProductsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [categories, setCategories] = useState<string[]>(['Entertainment', 'Software', 'Design']);
+  const [durationUnits, setDurationUnits] = useState<string[]>(['Hari', 'Bulan', 'Tahun', 'Unlimited']);
   const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -41,18 +42,20 @@ const AdminProductsPage = () => {
   useEffect(() => {
     fetchProducts();
     
-    // Fetch categories from Firestore settings
-    const fetchCategories = async () => {
+    // Fetch categories and duration units from Firestore settings
+    const fetchSettings = async () => {
       try {
         const snap = await getDoc(doc(db, 'settings', 'app'));
-        if (snap.exists() && snap.data().categories) {
-          setCategories(snap.data().categories);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.categories) setCategories(data.categories);
+          if (data.durationUnits) setDurationUnits(data.durationUnits);
         }
       } catch (error) {
-        console.error("Failed to fetch categories", error);
+        console.error("Failed to fetch settings", error);
       }
     };
-    fetchCategories();
+    fetchSettings();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -403,10 +406,9 @@ const AdminProductsPage = () => {
                               onChange={e => handlePackageChange(idx, 'durationUnit', e.target.value)}
                               className="flex-1 bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none appearance-none"
                             >
-                              <option value="Hari">Hari</option>
-                              <option value="Bulan">Bulan</option>
-                              <option value="Tahun">Tahun</option>
-                              <option value="Unlimited">Unlimited</option>
+                              {durationUnits.map((unit, uIdx) => (
+                                <option key={uIdx} value={unit}>{unit}</option>
+                              ))}
                             </select>
                           </div>
                         </div>
