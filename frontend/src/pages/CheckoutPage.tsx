@@ -5,9 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Product, Package, PromoCode } from '../types';
 import { Shield, CreditCard, ChevronLeft, Tag, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db, functions } from '../lib/firebase';
-import { httpsCallable } from 'firebase/functions';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 // Form validation schema using Zod
@@ -117,29 +116,45 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormInputs) => {
     setIsSubmitting(true);
     try {
-      const createOrder = httpsCallable(functions, 'createOrder');
-      const response = await createOrder({
+      // 1. Generate unique 3-digit code
+      const uniqueCode = Math.floor(Math.random() * (999 - 100 + 1)) + 100;
+      const amount = finalPrice + uniqueCode;
+
+      // 2. Create Order in DB
+      const orderId = `FR-${new Date().toISOString().slice(2,10).replace(/-/g,'')}-${Math.random().toString(16).slice(2,6).toUpperCase()}`;
+      
+      const payload = {
+        id: orderId,
+        userId: currentUser?.uid || 'GUEST',
+        customerName: data.name,
+        customerEmail: data.email,
+        customerWhatsapp: data.whatsapp,
         productId: product.id,
         packageId: pkg.id,
+        productName: product.name,
+        productCategory: product.category,
+        packageName: pkg.name,
+        packageDurationType: pkg.durationType || ((pkg.durationUnit as string) === 'Unlimited' ? 'UNLIMITED' : 'LIMITED'),
+        packageDurationValue: pkg.durationValue ?? null,
+        packageDurationUnit: pkg.durationUnit || null,
+        amount: amount,
+        status: 'PENDING',
         promoCode: appliedPromo?.code || null,
-        customer: {
-          name: data.name,
-          email: data.email,
-          whatsapp: data.whatsapp
-        }
-      });
-      
-      const result = response.data as any;
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-      navigate(`/payment/${result.orderId}`, { 
+      await setDoc(doc(db, 'orders', orderId), payload);
+      
+      navigate(`/payment/${orderId}`, { 
         state: { 
           product, 
           pkg,
           customerDetails: data,
           promo: appliedPromo,
-          finalPrice: result.amount,
-          qrisUrl: result.qrisUrl,
-          expiresAt: result.expiresAt
+          finalPrice: amount,
+          qrisUrl: '/images/qris-pribadi.png', // QRIS Statis kita
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
         }
       });
     } catch (error: any) {
