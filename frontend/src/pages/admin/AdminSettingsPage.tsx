@@ -329,6 +329,56 @@ const AdminSettingsPage = () => {
               </div>
             )}
 
+            {/* TAB: DURASI */}
+            {activeTab === 'durasi' && (
+              <div className="space-y-6 animate-in fade-in">
+                <div className="border-b border-white/10 pb-4 mb-6">
+                  <h2 className="text-xl font-bold text-white">Unit Durasi Paket</h2>
+                  <p className="text-sm text-slate-400 mt-1">Kelola daftar unit durasi (seperti Hari, Bulan, Tahun) yang bisa dipilih saat membuat paket produk.</p>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newDurationUnit}
+                      onChange={(e) => setNewDurationUnit(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveDurationUnit()}
+                      placeholder="Masukkan unit durasi baru..." 
+                      className="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all" 
+                    />
+                    <button 
+                      onClick={handleSaveDurationUnit}
+                      disabled={!newDurationUnit.trim()}
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/30"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Tambah
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-800/30 border border-white/10 rounded-xl overflow-hidden mt-6">
+                    <ul className="divide-y divide-white/5">
+                      {durationUnits.map((unit, idx) => (
+                        <li key={idx} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+                          <span className="text-white font-medium">{unit}</span>
+                          <button 
+                            onClick={() => handleRemoveDurationUnit(unit)}
+                            className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                      {durationUnits.length === 0 && (
+                        <li className="p-4 text-center text-slate-400">Belum ada unit durasi yang ditambahkan.</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB: PLACEHOLDERS FOR OTHERS */}
             {['notifications', 'security', 'integrations'].includes(activeTab) && (
               <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in">
